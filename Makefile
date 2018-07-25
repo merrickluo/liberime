@@ -1,31 +1,11 @@
-CC       = gcc
-EMACS    = emacs
-MINGW_CC = x86_64-w64-mingw32-gcc
-CFLAGS   = -ggdb3 -Wall -fPIC
-LDFLAGS =
+EMACS = emacs
 
-MODULE_SUFFIX := $(shell $(EMACS) -batch --eval '(princ module-file-suffix)')
+build/liberime.so:
+	mkdir build
+	cd build && cmake .. && make
 
-all : librime-emacs.so librime-emacs.dll librime.elc
-linux : librime-emacs.so librime.elc
-windows : librime-emacs.dll librime.elc
+clean:
+	rm -rf build
 
-emacs-rime.so : emacs-module-helpers.c emacs-rime-bindings.c emacs-rime.c
-	$(CC) -shared $(CFLAGS) -o $@ $^ -lrime
-
-librime-emacs.dll : librime-emacs.c
-	$(MINGW_CC) -shared $(CFLAGS) -o $@ $^
-
-librime.elc : librime.el
-	$(EMACS) -Q -batch -L . -f batch-byte-compile $<
-
-run : librime.elc librime-emacs$(MODULE_SUFFIX)
-	$(EMACS) -Q -L . -l $< -f librime
-
-test: emacs-rime.c
-	$(CC) -g -o test $^ -lrime && ./test
-
-clean :
-	$(RM) librime-emacs.so librime-emacs.dll librime.elc test
-
-.PHONY : clean all linux windows
+test: build/liberime.so
+	${EMACS} -Q -L build test.el

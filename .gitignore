@@ -1,0 +1,6 @@
+# emacs temporary files
+\#.*
+*~
+
+# cmake build files
+build

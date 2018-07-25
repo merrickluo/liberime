@@ -111,15 +111,30 @@ void EmacsRimeGetStatus(EmacsRime *rime) {
   if (rime->api->get_status(rime->session_id, &status)) {
     printf("status is %s\n", status.schema_name);
   }
+  rime->api->free_status(&status);
 }
 
-char* EmacsRimeTest(EmacsRime* rime) {
+bool ensureSession(EmacsRime *rime) {
   if (!rime->api->find_session(rime->session_id)) {
     rime->session_id = rime->api->create_session();
     if (!rime->session_id) {
       printf("cannot create rime session\n");
-      return NULL;
+      return false;
     }
+  }
+  return true;
+}
+
+bool EmacsRimeProcessKey(EmacsRime *rime, int keycode, int mask) {
+  if (!ensureSession(rime)) {
+    return false;
+  }
+  return rime->api->process_key(rime->session_id, keycode, mask);
+}
+
+char* EmacsRimeTest(EmacsRime* rime) {
+  if (!ensureSession(rime)) {
+    return NULL;
   }
   rime->api->process_key(rime->session_id, 0x77, 0);
   rime->api->process_key(rime->session_id, 0x6f, 0);

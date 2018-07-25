@@ -19,6 +19,24 @@ EmacsRimeTestBind (emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *da
 }
 
 static emacs_value
+EmacsRimeProcessKeyBind (emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+  EmacsRime* rime = (EmacsRime*) data;
+  int keycode = extract_integer(env, args[0]);
+  int mask = extract_integer(env, args[1]);
+  if (EmacsRimeProcessKey(rime, keycode, mask)) {
+    return env->make_integer(env, 0);
+  }
+  return env->make_integer(env, 1);
+}
+
+static emacs_value
+EmacsRimeGetCandWordsBind(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+  EmacsRime* rime = (EmacsRime*) data;
+  char* cand = EmacsRimeGetCandWords(rime);
+  return env->make_string(env, cand, strlen(cand));
+}
+
+static emacs_value
 EmacsRimeSearchBind(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data)
 {
   EmacsRime* rime = (EmacsRime *) data;
@@ -47,10 +65,12 @@ int emacs_module_init (struct emacs_runtime *ert) EMACS_NOEXCEPT
   emacs_env *env = ert->get_environment (ert);
 
   EmacsRime* rime = EmacsRimeCreate();
-  DEFUN("emacs-rime-test", EmacsRimeTestBind, 0, 1, "test", rime);
-  DEFUN("emacs-rime-search", EmacsRimeSearchBind, 1, 1, "search", rime);
+  DEFUN("rime-test", EmacsRimeTestBind, 0, 1, "test", rime);
+  DEFUN("rime-search", EmacsRimeSearchBind, 1, 1, "search", rime);
+  DEFUN("rime-process-key", EmacsRimeProcessKeyBind, 2, 2, "process key", rime);
+  DEFUN("rime-get-candidates", EmacsRimeGetCandWordsBind, 0, 0, "get candidates", rime);
 
-  provide (env, "emacs-rime");
+  provide (env, "liberime");
 
   /* loaded successfully */
   return 0;
