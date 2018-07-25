@@ -7,4 +7,5 @@
        (- (float-time) ,start))))
 
 (require 'liberime)
-(rime-search "woshibushishadehensfds")
+(rime-start "/usr/share/rime-data" "~/.emacs.d/rime")
+(rime-search "wode")

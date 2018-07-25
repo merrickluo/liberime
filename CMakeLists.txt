@@ -7,12 +7,12 @@ set(CMAKE_POSITION_INDEPENDENT_CODE TRUE CACHE BOOL "pic" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "shared" FORCE)
 set(BUILD_CLAR OFF CACHE BOOL "clar" FORCE)
 
-find_library(rime librime.so)
+find_library(rime librime.so REQURIED)
 
 add_library(erime SHARED
-  src/emacs-module-helpers.c
-  src/emacs-rime-bindings.c
-  src/emacs-rime.c)
+  src/interface.c
+  src/liberime-bindings.c
+  src/liberime.c)
 set_target_properties(erime PROPERTIES C_STANDARD 99)
 
 target_link_libraries(erime rime)
