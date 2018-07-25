@@ -17,6 +17,8 @@ make test
 
 *** initialize
     shared_data_dir: [[https://github.com/rime/home/wiki/SharedData][detail]]
+
+
     user_data_dir: recommend ~~/.emacs.d/rime~,
     or you can try share same user dir with fcitx ~~/.config/fcitx/rime~ (not tested)
 
