@@ -62,10 +62,8 @@ EmacsRimeCandidates get_candidates(EmacsRime *rime) {
   }
 
   RimeCandidateListIterator iterator = {0};
-  printf("candidates object: %ld", c.size);
   if (rime->api->candidate_list_begin(rime->session_id, &iterator)) {
     while (rime->api->candidate_list_next(&iterator)) {
-      printf("%ld: %s\n", c.size, iterator.candidate.text);
       c.candidates[c.size] = malloc(strlen(iterator.candidate.text));
       strcpy(c.candidates[c.size], iterator.candidate.text);
       c.size += 1;
@@ -144,11 +142,9 @@ liberime_search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data)
     const char *value = candidates.candidates[i];
     array[i] = env->make_string(env, value, strlen(value));
   }
-  printf("array initialize finish\n");
 
   emacs_value list = env->intern(env, "list");
   emacs_value result = env->funcall(env, list, candidates.size, array);
-  printf("result initialize finish\n");
 
   free(candidates.candidates);
   free(array);
