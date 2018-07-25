@@ -1,0 +1,34 @@
+* liberime
+
+  a emacs dynamic module
+  provide librime bindings for emacs
+
+** Build
+
+#+NAME: Y
+#+BEGIN_SRC shell
+make liberime
+
+# try
+make test
+#+END_SRC
+
+** Usage
+
+*** initialize
+    shared_data_dir: [[https://github.com/rime/home/wiki/SharedData][detail]]
+    user_data_dir: recommend ~~/.emacs.d/rime~,
+    or you can try share same user dir with fcitx ~~/.config/fcitx/rime~ (not tested)
+
+#+NAME: Y
+#+BEGIN_SRC emacs-lisp
+(require 'liberime)
+(rime-start "$rime_shared_data_dir" "$user_data_dir")
+#+END_SRC
+
+*** avaliable api
+
+#+NAME: Y
+#+BEGIN_SRC emacs-lisp
+(rime-search "pinyin") ;; returns list of candidates
+#+END_SRC
