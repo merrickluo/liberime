@@ -7,5 +7,5 @@
        (- (float-time) ,start))))
 
 (require 'liberime)
-(rime-start "/usr/share/rime-data" "~/.emacs.d/rime")
+(rime-start "/usr/share/rime-data" (expand-file-name "~/.emacs.d/rime"))
 (rime-search "wode")
