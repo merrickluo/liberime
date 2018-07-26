@@ -15,6 +15,7 @@
            env->make_function(env, min_nargs, max_nargs, cname, doc, data))
 
 #define CANDIDATE_MAXSTRLEN 1024
+#define NO_SESSION_ERR "Cannot connect to librime session, make sure to run liberime-start first"
 
 typedef struct _EmacsRime {
   RimeSessionId session_id;
@@ -127,12 +128,8 @@ liberime_search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data)
   EmacsRime *rime = (EmacsRime*) data;
   char* pinyin = em_get_string(env, args[0]);
 
-  if (!rime->api->find_session(rime->session_id)) {
-    rime->session_id = rime->api->create_session();
-    if (!rime->session_id) {
-      printf("cannot create rime session\n");
-      return NULL;
-    }
+  if (!ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
   }
 
   rime->api->clear_composition(rime->session_id);
@@ -168,7 +165,7 @@ liberime_select_schema(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void
   EmacsRime* rime = (EmacsRime*) data;
   const char* schema_id = em_get_string(env, args[0]);
   if (!ensure_session(rime)) {
-    em_signal_rimeerr(env, 1, "Cannot connect to rime session");
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
     return NULL;
   }
 
@@ -186,7 +183,7 @@ void liberime_init(emacs_env* env) {
 
   if (!rime->api) {
     free(rime);
-    em_signal_rimeerr(env, 1, "Cannot get librime api");
+    em_signal_rimeerr(env, 1, "No librime found");
     return;
   }
 
