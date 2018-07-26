@@ -1,7 +1,9 @@
-* liberime
+* liberime [Under Development]
 
-  a emacs dynamic module
-  provide librime bindings for emacs
+A emacs dynamic module provide librime bindings for emacs
+
+Currently only several methods implement, also added a search method
+to work with [[https://github.com/tumashu/pyim][pyim]]
 
 ** Build
 
@@ -41,7 +43,7 @@ load with use-package
 
 #+END_SRC
 
-use with pyim
+use with [[https://github.com/tumashu/pyim][pyim]]
 
 #+NAME: Y
 #+BEGIN_SRC emacs-lisp
