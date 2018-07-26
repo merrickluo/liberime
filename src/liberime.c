@@ -105,14 +105,16 @@ liberime_start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void* data) 
   return em_t;
 }
 
-void free_candidates(CandidateLinkedList *list) {
+void free_candidate_list(CandidateLinkedList *list) {
   CandidateLinkedList* next = list;
   while (next) {
     CandidateLinkedList* temp = next;
     next = temp->next;
-    if (temp->value) {
-       free(temp->value);
-     }
+    // do not free temp->value
+    // it seems emacs_env->make_string didn't do copy
+    /* if (temp->value) { */
+    /*    free(temp->value); */
+    /* } */
     free(temp);
   }
 }
@@ -151,7 +153,7 @@ liberime_search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data)
   emacs_value result = env->funcall(env, flist, candidates.size, array);
 
   // free(candidates.candidates);
-  free_candidates(candidates.list);
+  free_candidate_list(candidates.list);
   free(array);
   free(pinyin);
 
