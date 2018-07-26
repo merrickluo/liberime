@@ -38,7 +38,7 @@ void notification_handler(void *context,
                           const char* message_type,
                           const char* message_value) {
   // TODO send message to emacs
-  printf("notification: %s: %s\n", message_type, message_value);
+  printf("librime notification: %s: %s\n", message_type, message_value);
 }
 
 // unused for now
@@ -46,7 +46,7 @@ static bool ensure_session(EmacsRime *rime) {
   if (!rime->api->find_session(rime->session_id)) {
     rime->session_id = rime->api->create_session();
     if (!rime->session_id) {
-      printf("cannot create rime session\n");
+      // printf("cannot create rime session\n");
       return false;
     }
   }
@@ -137,7 +137,7 @@ liberime_search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data)
 
   EmacsRimeCandidates candidates = get_candidates(rime);
 
-  printf("%s: find candidates size: %ld\n", pinyin, candidates.size);
+  // printf("%s: find candidates size: %ld\n", pinyin, candidates.size);
   emacs_value* array = malloc(sizeof(emacs_value) * candidates.size);
 
   CandidateLinkedList *next = candidates.list;
@@ -147,7 +147,7 @@ liberime_search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data)
     array[i++] = env->make_string(env, value, strlen(value));
     next = next->next;
   }
-  printf("conveted array size: %d\n", i);
+  // printf("conveted array size: %d\n", i);
 
   emacs_value flist = env->intern(env, "list");
   emacs_value result = env->funcall(env, flist, candidates.size, array);
