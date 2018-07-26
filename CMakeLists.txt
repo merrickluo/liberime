@@ -11,8 +11,8 @@ find_library(rime librime.so REQURIED)
 
 add_library(erime SHARED
   src/interface.c
-  src/liberime-bindings.c
-  src/liberime.c)
+  src/liberime.c
+  src/init.c)
 set_target_properties(erime PROPERTIES C_STANDARD 99)
 
 target_link_libraries(erime rime)
