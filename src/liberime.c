@@ -14,6 +14,7 @@
   em_defun(env, ename,                                                  \
            env->make_function(env, min_nargs, max_nargs, cname, doc, data))
 
+#define CANDIDATE_MAXSTRLEN 1024
 
 typedef struct _EmacsRime {
   RimeSessionId session_id;
@@ -52,7 +53,7 @@ static bool ensure_session(EmacsRime *rime) {
 }
 
 EmacsRimeCandidates get_candidates(EmacsRime *rime) {
-  EmacsRimeCandidates c = {.size=0, .candidates=malloc(sizeof(CandidateLinkedList))};
+  EmacsRimeCandidates c = {.size=0, .candidates=(CandidateLinkedList *)malloc(sizeof *CandidateLinkedList)};
 
   RimeCandidateListIterator iterator = {0};
   CandidateLinkedList* next = c.candidates;
@@ -60,9 +61,10 @@ EmacsRimeCandidates get_candidates(EmacsRime *rime) {
     while (rime->api->candidate_list_next(&iterator)) {
       c.size += 1;
 
-      next->value = malloc(sizeof(char) * (strnlen(iterator.candidate.text, 1024) + 1));
-      strncpy(next->value, iterator.candidate.text, strnlen(iterator.candidate.text, 1024) + 1);
-      next->next = malloc(sizeof(CandidateLinkedList));
+      next->value = (char *)malloc(CANDIDATE_MAXSTRLEN + 1);
+      strncpy(next->value, iterator.candidate.text, strnlen(iterator.candidate.text, CANDIDATE_MAXSTRLEN) + 1);
+      next->value[CANDIDATE_MAXSTRLEN] = '\0';
+      next->next = (CandidateLinkedList *)malloc(sizeof *CandidateLinkedList);
 
       next = next->next;
     }
