@@ -163,6 +163,21 @@ liberime_search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data)
   return result;
 }
 
+static emacs_value
+liberime_select_schema(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+  EmacsRime* rime = (EmacsRime*) data;
+  const char* schema_id = em_get_string(env, args[0]);
+  if (!ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, "Cannot connect to rime session");
+    return NULL;
+  }
+
+  if (rime->api->select_schema(rime->session_id, schema_id)) {
+    return em_t;
+  }
+  return em_nil;
+}
+
 void liberime_init(emacs_env* env) {
   EmacsRime* rime = (EmacsRime*) malloc(sizeof(EmacsRime));
 
@@ -175,6 +190,7 @@ void liberime_init(emacs_env* env) {
     return;
   }
 
-  DEFUN("liberime-search", liberime_search, 1, 1, "convert pinyin to candidates", rime);
   DEFUN("liberime-start", liberime_start, 2, 2, "start rime session", rime);
+  DEFUN("liberime-search", liberime_search, 1, 1, "convert pinyin to candidates", rime);
+  DEFUN("liberime-select-schema", liberime_select_schema, 1, 1, "select rime schema", rime);
 }

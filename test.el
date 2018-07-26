@@ -7,16 +7,10 @@
        (- (float-time) ,start))))
 
 (require 'liberime)
-(rime-start "/usr/share/rime-data" (expand-file-name "~/.emacs.d/rime"))
-(rime-search "wode")
+(liberime-start "/usr/share/rime-data" (expand-file-name "~/.emacs.d/rime"))
+(liberime-select-schema "luna_pinyin_simp")
 
 (require 'pyim)
 (setq pyim-default-scheme 'quanpin)
 ;; (setq pyim-default-scheme 'rime)
 (set-input-method 'pyim)
-
-
-
-
-
-
