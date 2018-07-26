@@ -8,10 +8,12 @@
 #+NAME: Y
 #+BEGIN_SRC shell
 make liberime
+ls build/
 
 # try
 make test
 #+END_SRC
+
 
 ** Usage
 
@@ -23,15 +25,54 @@ make test
     or you can try share same user dir with fcitx
     "~/.config/fcitx/rime" (not tested)
 
-#+NAME: Y
-#+BEGIN_SRC emacs-lisp
-(require 'liberime)
-(rime-start "$rime_shared_data_dir" "$user_data_dir")
-#+END_SRC
-
-*** Avaliable API
+load with use-package
 
 #+NAME: Y
 #+BEGIN_SRC emacs-lisp
-(rime-search "pinyin") ;; returns list of candidates
+(use-package liberime
+  :load-path "path to liberime.so/liberime.dll"
+  :config
+  (defun start-liberime ()
+    ;; incase hooks not running
+    (interactive)
+    (liberime-start "$rime_shared_data_dir" "$user_data_dir")
+    (liberime-start "/usr/share/rime-data" (concat user-emacs-directory "rime/"))
+    (liberime-select-schema "luna_pinyin_simp")))
+
 #+END_SRC
+
+use with pyim
+
+#+NAME: Y
+#+BEGIN_SRC emacs-lisp
+(add-hook 'pyim-load-hook 'start-liberime) ;; or set with use-package
+#+END_SRC
+
+
+available schema can be fetched with "liberime-get-schema-list"
+
+#+NAME: Y
+#+BEGIN_SRC emacs-lisp
+(liberime-get-schema-list)
+
+;; example output
+(("luna_pinyin" "朙月拼音")
+ ("luna_pinyin_simp" "朙月拼音·简化字")
+ ("luna_pinyin_fluency" "朙月拼音·語句流")
+ ("bopomofo" "注音")
+ ("bopomofo_tw" "注音·臺灣正體")
+ ("cangjie5" "倉頡五代")
+ ("stroke" "五筆畫")
+ ("terra_pinyin" "地球拼音"))
+#+END_SRC
+
+
+*** Avaliable methods
+
+TODO describe
+
+**** liberime-search
+
+**** liberime-get-schema-list
+
+**** liberime-select-schema
