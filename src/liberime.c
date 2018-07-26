@@ -110,11 +110,9 @@ void free_candidates(CandidateLinkedList *list) {
   while (next) {
     CandidateLinkedList* temp = next;
     next = temp->next;
-    // FIXME should be freed
-    /* if (temp->value) { */
-    /*   free(temp->value); */
-    /* } */
-
+    if (temp->value) {
+       free(temp->value);
+     }
     free(temp);
   }
 }
