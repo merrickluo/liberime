@@ -80,7 +80,7 @@ EmacsRimeCandidates get_candidates(EmacsRime *rime) {
 
 // bindings
 static emacs_value
-liberime_start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void* data) {
+start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime *rime = (EmacsRime*) data;
 
   char* shared_data_dir = em_get_string(env, args[0]);
@@ -126,7 +126,7 @@ void free_candidate_list(CandidateLinkedList *list) {
 }
 
 emacs_value
-liberime_search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
   char* pinyin = em_get_string(env, args[0]);
 
@@ -163,7 +163,7 @@ liberime_search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data)
 }
 
 static emacs_value
-liberime_get_schema_list(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+get_schema_list(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
   if (!ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -197,7 +197,7 @@ liberime_get_schema_list(emacs_env* env, ptrdiff_t nargs, emacs_value args[], vo
 }
 
 static emacs_value
-liberime_select_schema(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+select_schema(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
   const char* schema_id = em_get_string(env, args[0]);
   if (!ensure_session(rime)) {
@@ -223,8 +223,8 @@ void liberime_init(emacs_env* env) {
     return;
   }
 
-  DEFUN("liberime-start", liberime_start, 2, 2, "start rime session", rime);
-  DEFUN("liberime-search", liberime_search, 1, 1, "convert pinyin to candidates", rime);
-  DEFUN("liberime-select-schema", liberime_select_schema, 1, 1, "select rime schema", rime);
-  DEFUN("liberime-get-schema-list", liberime_get_schema_list, 0, 0, "list schema list", rime);
+  DEFUN("liberime-start", start, 2, 2, "start rime session", rime);
+  DEFUN("liberime-search", search, 1, 1, "convert pinyin to candidates", rime);
+  DEFUN("liberime-select-schema", select_schema, 1, 1, "select rime schema", rime);
+  DEFUN("liberime-get-schema-list", get_schema_list, 0, 0, "list schema list", rime);
 }
