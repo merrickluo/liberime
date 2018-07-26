@@ -44,7 +44,7 @@ void notification_handler(void *context,
 }
 
 // unused for now
-static bool ensure_session(EmacsRime *rime) {
+static bool _ensure_session(EmacsRime *rime) {
   if (!rime->api->find_session(rime->session_id)) {
     rime->session_id = rime->api->create_session();
     if (!rime->session_id) {
@@ -55,7 +55,7 @@ static bool ensure_session(EmacsRime *rime) {
   return true;
 }
 
-EmacsRimeCandidates get_candidates(EmacsRime *rime, size_t limit) {
+EmacsRimeCandidates _get_candidates(EmacsRime *rime, size_t limit) {
   EmacsRimeCandidates c = {.size=0, .list=(CandidateLinkedList *)malloc(sizeof(CandidateLinkedList))};
 
   RimeCandidateListIterator iterator = {0};
@@ -143,14 +143,14 @@ search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
     }
   }
 
-  if (!ensure_session(rime)) {
+  if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
   }
 
   rime->api->clear_composition(rime->session_id);
   rime->api->simulate_key_sequence(rime->session_id, pinyin);
 
-  EmacsRimeCandidates candidates = get_candidates(rime, limit);
+  EmacsRimeCandidates candidates = _get_candidates(rime, limit);
 
   // printf("%s: find candidates size: %ld\n", pinyin, candidates.size);
   emacs_value* array = malloc(sizeof(emacs_value) * candidates.size);
@@ -178,7 +178,7 @@ search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
 static emacs_value
 get_schema_list(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
-  if (!ensure_session(rime)) {
+  if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
     return NULL;
   }
@@ -213,7 +213,7 @@ static emacs_value
 select_schema(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
   const char* schema_id = em_get_string(env, args[0]);
-  if (!ensure_session(rime)) {
+  if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
     return NULL;
   }
