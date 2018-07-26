@@ -84,10 +84,6 @@ static emacs_value
 liberime_start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime *rime = (EmacsRime*) data;
 
-  if (nargs < 2) {
-    // TODO report error
-    return NULL;
-  }
   char* shared_data_dir = em_get_string(env, args[0]);
   char* user_data_dir = em_get_string(env, args[1]);
 
