@@ -132,7 +132,15 @@ search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
 
   size_t limit = 0;
   if (nargs == 2) {
-    limit = env->extract_integer(env, args[1]);
+    if (!env->is_not_nil(env, args[1])) {
+      limit = 0;
+    } else {
+      limit = env->extract_integer(env, args[1]);
+      // if limit set to 0 return nil immediately
+      if (limit == 0) {
+        return NULL;
+      }
+    }
   }
 
   if (!ensure_session(rime)) {
