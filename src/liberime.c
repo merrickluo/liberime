@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <rime_api.h>
+#include <limits.h>
 
 #include <unistd.h>
 
@@ -55,13 +56,13 @@ static bool ensure_session(EmacsRime *rime) {
   return true;
 }
 
-EmacsRimeCandidates get_candidates(EmacsRime *rime) {
+EmacsRimeCandidates get_candidates(EmacsRime *rime, size_t limit) {
   EmacsRimeCandidates c = {.size=0, .list=(CandidateLinkedList *)malloc(sizeof(CandidateLinkedList))};
 
   RimeCandidateListIterator iterator = {0};
   CandidateLinkedList* next = c.list;
   if (rime->api->candidate_list_begin(rime->session_id, &iterator)) {
-    while (rime->api->candidate_list_next(&iterator)) {
+    while (rime->api->candidate_list_next(&iterator) && c.size < limit) {
       c.size += 1;
 
       next->value = (char *)malloc(CANDIDATE_MAXSTRLEN + 1);
@@ -130,6 +131,11 @@ search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
   char* pinyin = em_get_string(env, args[0]);
 
+  size_t limit = LONG_MAX;
+  if (nargs == 2) {
+    limit = env->extract_integer(env, args[1]);
+  }
+
   if (!ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
   }
@@ -137,7 +143,7 @@ search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   rime->api->clear_composition(rime->session_id);
   rime->api->simulate_key_sequence(rime->session_id, pinyin);
 
-  EmacsRimeCandidates candidates = get_candidates(rime);
+  EmacsRimeCandidates candidates = get_candidates(rime, limit);
 
   // printf("%s: find candidates size: %ld\n", pinyin, candidates.size);
   emacs_value* array = malloc(sizeof(emacs_value) * candidates.size);
@@ -224,7 +230,7 @@ void liberime_init(emacs_env* env) {
   }
 
   DEFUN("liberime-start", start, 2, 2, "start rime session", rime);
-  DEFUN("liberime-search", search, 1, 1, "convert pinyin to candidates", rime);
+  DEFUN("liberime-search", search, 1, 2, "convert pinyin to candidates", rime);
   DEFUN("liberime-select-schema", select_schema, 1, 1, "select rime schema", rime);
   DEFUN("liberime-get-schema-list", get_schema_list, 0, 0, "list schema list", rime);
 }
