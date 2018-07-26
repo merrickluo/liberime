@@ -172,6 +172,6 @@ void liberime_init(emacs_env* env) {
     return;
   }
 
-  DEFUN("rime-search", liberime_search, 1, 1, "convert pinyin to candidates", rime);
-  DEFUN("rime-start", liberime_start, 2, 2, "start rime session", rime);
+  DEFUN("liberime-search", liberime_search, 1, 1, "convert pinyin to candidates", rime);
+  DEFUN("liberime-start", liberime_start, 2, 2, "start rime session", rime);
 }
