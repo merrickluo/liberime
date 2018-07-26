@@ -27,9 +27,9 @@ typedef struct _EmacsRimeCandidates {
 } EmacsRimeCandidates;
 
 void notification_handler(void *context,
-                                   RimeSessionId session_id,
-                                   const char* message_type,
-                                   const char* message_value) {
+                          RimeSessionId session_id,
+                          const char* message_type,
+                          const char* message_value) {
   // TODO send message to emacs
   printf("notification: %s: %s\n", message_type, message_value);
 }
