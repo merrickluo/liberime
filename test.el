@@ -9,3 +9,14 @@
 (require 'liberime)
 (rime-start "/usr/share/rime-data" (expand-file-name "~/.emacs.d/rime"))
 (rime-search "wode")
+
+(require 'pyim)
+(setq pyim-default-scheme 'quanpin)
+;; (setq pyim-default-scheme 'rime)
+(set-input-method 'pyim)
+
+
+
+
+
+
