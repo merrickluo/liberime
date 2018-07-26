@@ -26,3 +26,7 @@ endif(APPLE)
 if(WIN32)
   set_target_properties(erime PROPERTIES PREFIX lib)
 endif(WIN32)
+
+if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
+  set(CMAKE_C_FLAGS_DEBUG "-fuse-ld=gold -fsanitize=address,leak,undefined -fno-omit-frame-pointer -pg -g")
+endif()

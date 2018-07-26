@@ -14,6 +14,7 @@
   em_defun(env, ename,                                                  \
            env->make_function(env, min_nargs, max_nargs, cname, doc, data))
 
+#define CANDIDATE_MAXSTRLEN 1024
 
 typedef struct _EmacsRime {
   RimeSessionId session_id;
@@ -28,7 +29,7 @@ typedef struct _CandidateLinkedList {
 
 typedef struct _EmacsRimeCandidates {
   size_t size;
-  CandidateLinkedList* candidates;
+  CandidateLinkedList* list;
 } EmacsRimeCandidates;
 
 void notification_handler(void *context,
@@ -52,17 +53,18 @@ static bool ensure_session(EmacsRime *rime) {
 }
 
 EmacsRimeCandidates get_candidates(EmacsRime *rime) {
-  EmacsRimeCandidates c = {.size=0, .candidates=malloc(sizeof(CandidateLinkedList))};
+  EmacsRimeCandidates c = {.size=0, .list=(CandidateLinkedList *)malloc(sizeof(CandidateLinkedList))};
 
   RimeCandidateListIterator iterator = {0};
-  CandidateLinkedList* next = c.candidates;
+  CandidateLinkedList* next = c.list;
   if (rime->api->candidate_list_begin(rime->session_id, &iterator)) {
     while (rime->api->candidate_list_next(&iterator)) {
       c.size += 1;
 
-      next->value = malloc(sizeof(char) * (strnlen(iterator.candidate.text, 1024) + 1));
-      strncpy(next->value, iterator.candidate.text, strnlen(iterator.candidate.text, 1024) + 1);
-      next->next = malloc(sizeof(CandidateLinkedList));
+      next->value = (char *)malloc(CANDIDATE_MAXSTRLEN + 1);
+      strncpy(next->value, iterator.candidate.text, strnlen(iterator.candidate.text, CANDIDATE_MAXSTRLEN) + 1);
+      next->value[CANDIDATE_MAXSTRLEN] = '\0';
+      next->next = (CandidateLinkedList *)malloc(sizeof(CandidateLinkedList));
 
       next = next->next;
     }
@@ -103,16 +105,16 @@ liberime_start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void* data) 
   return em_t;
 }
 
-void free_candidates(CandidateLinkedList *list) {
+void free_candidate_list(CandidateLinkedList *list) {
   CandidateLinkedList* next = list;
   while (next) {
     CandidateLinkedList* temp = next;
     next = temp->next;
-    // FIXME should be freed
+    // do not free temp->value
+    // it seems emacs_env->make_string didn't do copy
     /* if (temp->value) { */
-    /*   free(temp->value); */
+    /*    free(temp->value); */
     /* } */
-
     free(temp);
   }
 }
@@ -138,7 +140,7 @@ liberime_search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data)
   printf("%s: find candidates size: %ld\n", pinyin, candidates.size);
   emacs_value* array = malloc(sizeof(emacs_value) * candidates.size);
 
-  CandidateLinkedList *next = candidates.candidates;
+  CandidateLinkedList *next = candidates.list;
   int i = 0;
   while (next && i < candidates.size) {
     const char *value = next->value;
@@ -151,7 +153,7 @@ liberime_search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data)
   emacs_value result = env->funcall(env, flist, candidates.size, array);
 
   // free(candidates.candidates);
-  free_candidates(candidates.candidates);
+  free_candidate_list(candidates.list);
   free(array);
   free(pinyin);
 
