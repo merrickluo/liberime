@@ -53,7 +53,7 @@ static bool ensure_session(EmacsRime *rime) {
 }
 
 EmacsRimeCandidates get_candidates(EmacsRime *rime) {
-  EmacsRimeCandidates c = {.size=0, .candidates=(CandidateLinkedList *)malloc(sizeof *CandidateLinkedList)};
+  EmacsRimeCandidates c = {.size=0, .candidates=(CandidateLinkedList *)malloc(sizeof(CandidateLinkedList*))};
 
   RimeCandidateListIterator iterator = {0};
   CandidateLinkedList* next = c.candidates;
@@ -64,7 +64,7 @@ EmacsRimeCandidates get_candidates(EmacsRime *rime) {
       next->value = (char *)malloc(CANDIDATE_MAXSTRLEN + 1);
       strncpy(next->value, iterator.candidate.text, strnlen(iterator.candidate.text, CANDIDATE_MAXSTRLEN) + 1);
       next->value[CANDIDATE_MAXSTRLEN] = '\0';
-      next->next = (CandidateLinkedList *)malloc(sizeof *CandidateLinkedList);
+      next->next = (CandidateLinkedList *)malloc(sizeof(CandidateLinkedList*));
 
       next = next->next;
     }
