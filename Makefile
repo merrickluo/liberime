@@ -1,8 +1,9 @@
 EMACS = emacs
+TYPE=Release
 
 liberime:
 	mkdir -p build
-	cd build && cmake .. && make
+	cd build && cmake -DCMAKE_BUILD_TYPE=${TYPE} .. && make
 
 clean:
 	rm -rf build
