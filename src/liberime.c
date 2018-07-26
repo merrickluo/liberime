@@ -168,7 +168,7 @@ void liberime_init(emacs_env* env) {
 
   if (!rime->api) {
     free(rime);
-    // TODO report error
+    em_signal_rimeerr(env, 1, "Cannot get librime api");
     return;
   }
 
