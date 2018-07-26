@@ -15,6 +15,8 @@
            env->make_function(env, min_nargs, max_nargs, cname, doc, data))
 
 #define CANDIDATE_MAXSTRLEN 1024
+#define SCHEMA_MAXSTRLEN 1024
+
 #define NO_SESSION_ERR "Cannot connect to librime session, make sure to run liberime-start first"
 
 typedef struct _EmacsRime {
@@ -161,6 +163,40 @@ liberime_search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data)
 }
 
 static emacs_value
+liberime_get_schema_list(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+  EmacsRime* rime = (EmacsRime*) data;
+  if (!ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    return NULL;
+  }
+
+  RimeSchemaList schema_list;
+  if (!rime->api->get_schema_list(&schema_list)) {
+    em_signal_rimeerr(env, 1, "Get schema list form librime failed");
+    return NULL;
+  }
+
+  emacs_value flist = env->intern(env, "list");
+  emacs_value* array = malloc(sizeof(emacs_value) * schema_list.size);
+  for (int i = 0; i < schema_list.size; i++) {
+    RimeSchemaListItem item = schema_list.list[i];
+    emacs_value* pair = malloc(sizeof(emacs_value) * 2);
+    pair[0] = env->make_string(env, item.schema_id, strnlen(item.schema_id, SCHEMA_MAXSTRLEN));
+    pair[1] = env->make_string(env, item.name, strnlen(item.name, SCHEMA_MAXSTRLEN));
+
+    array[i] = env->funcall(env, flist, 2, pair);
+    free(pair);
+  }
+
+  emacs_value result = env->funcall(env, flist, schema_list.size, array);
+
+  free(array);
+  rime->api->free_schema_list(&schema_list);
+
+  return result;
+}
+
+static emacs_value
 liberime_select_schema(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
   const char* schema_id = em_get_string(env, args[0]);
@@ -190,4 +226,5 @@ void liberime_init(emacs_env* env) {
   DEFUN("liberime-start", liberime_start, 2, 2, "start rime session", rime);
   DEFUN("liberime-search", liberime_search, 1, 1, "convert pinyin to candidates", rime);
   DEFUN("liberime-select-schema", liberime_select_schema, 1, 1, "select rime schema", rime);
+  DEFUN("liberime-get-schema-list", liberime_get_schema_list, 0, 0, "list schema list", rime);
 }
