@@ -21,9 +21,14 @@ typedef struct _EmacsRime {
   bool firstRun;
 } EmacsRime;
 
+typedef struct _CandidateLinkedList {
+  char* value;
+  struct _CandidateLinkedList* next;
+} CandidateLinkedList;
+
 typedef struct _EmacsRimeCandidates {
   size_t size;
-  char** candidates;
+  CandidateLinkedList* candidates;
 } EmacsRimeCandidates;
 
 void notification_handler(void *context,
@@ -34,6 +39,7 @@ void notification_handler(void *context,
   printf("notification: %s: %s\n", message_type, message_value);
 }
 
+// unused for now
 static bool ensure_session(EmacsRime *rime) {
   if (!rime->api->find_session(rime->session_id)) {
     rime->session_id = rime->api->create_session();
@@ -46,35 +52,23 @@ static bool ensure_session(EmacsRime *rime) {
 }
 
 EmacsRimeCandidates get_candidates(EmacsRime *rime) {
-  EmacsRimeCandidates c = { .size = 0,
-                            .candidates = malloc(4096 * sizeof(char*)) };
-
-  RIME_STRUCT(RimeContext, context);
-  if (!rime->api->get_context(rime->session_id, &context)) {
-    printf("no context? \n");
-    return c;
-  }
-
-  if (context.composition.length == 0) {
-    printf("no candidates\n");
-    rime->api->free_context(&context);
-    return c;
-  }
+  EmacsRimeCandidates c = {.size=0, .candidates=malloc(sizeof(CandidateLinkedList))};
 
   RimeCandidateListIterator iterator = {0};
+  CandidateLinkedList* next = c.candidates;
   if (rime->api->candidate_list_begin(rime->session_id, &iterator)) {
     while (rime->api->candidate_list_next(&iterator)) {
-      c.candidates[c.size] = malloc(strlen(iterator.candidate.text));
-      strcpy(c.candidates[c.size], iterator.candidate.text);
       c.size += 1;
-      if (c.size > 4000) {
-        break;
-      }
+
+      next->value = malloc(sizeof(char) * (strnlen(iterator.candidate.text, 1024) + 1));
+      strncpy(next->value, iterator.candidate.text, strnlen(iterator.candidate.text, 1024) + 1);
+      next->next = malloc(sizeof(CandidateLinkedList));
+
+      next = next->next;
     }
+    next->next = NULL;
     rime->api->candidate_list_end(&iterator);
   }
-
-  rime->api->free_context(&context);
 
   return c;
 }
@@ -109,13 +103,23 @@ liberime_start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void* data) 
   return em_t;
 }
 
+void free_candidates(CandidateLinkedList *list) {
+  CandidateLinkedList* next = list;
+  while (next) {
+    CandidateLinkedList* temp = next;
+    next = temp->next;
+    // FIXME should be freed
+    /* if (temp->value) { */
+    /*   free(temp->value); */
+    /* } */
+
+    free(temp);
+  }
+}
+
 emacs_value
 liberime_search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
-  if (nargs < 1) {
-    // TODO report error
-    return NULL;
-  }
   char* pinyin = em_get_string(env, args[0]);
 
   if (!rime->api->find_session(rime->session_id)) {
@@ -131,24 +135,28 @@ liberime_search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data)
 
   EmacsRimeCandidates candidates = get_candidates(rime);
 
-  printf("find candidates size: %ld\n", candidates.size);
+  printf("%s: find candidates size: %ld\n", pinyin, candidates.size);
   emacs_value* array = malloc(sizeof(emacs_value) * candidates.size);
 
-  for (int i = 0; i < candidates.size; i++) {
-    const char *value = candidates.candidates[i];
-    array[i] = env->make_string(env, value, strlen(value));
+  CandidateLinkedList *next = candidates.candidates;
+  int i = 0;
+  while (next && i < candidates.size) {
+    const char *value = next->value;
+    array[i++] = env->make_string(env, value, strlen(value));
+    next = next->next;
   }
+  printf("conveted array size: %d\n", i);
 
-  emacs_value list = env->intern(env, "list");
-  emacs_value result = env->funcall(env, list, candidates.size, array);
+  emacs_value flist = env->intern(env, "list");
+  emacs_value result = env->funcall(env, flist, candidates.size, array);
 
-  free(candidates.candidates);
+  // free(candidates.candidates);
+  free_candidates(candidates.candidates);
   free(array);
   free(pinyin);
 
   return result;
 }
-
 
 void liberime_init(emacs_env* env) {
   EmacsRime* rime = (EmacsRime*) malloc(sizeof(EmacsRime));
