@@ -26,8 +26,8 @@ endif(APPLE)
 
 # sanitizer and debug info,
 # FIXME: remove when stable
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fuse-ld=gold -fsanitize=address,leak,undefined -fno-omit-frame-pointer -pg -g")
+if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fuse-ld=gold -fsanitize=address,leak,undefined -fno-omit-frame-pointer -pg -g")
 endif()
 
 if(WIN32)
