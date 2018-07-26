@@ -100,6 +100,9 @@ liberime_start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void* data) 
   rime->api->set_notification_handler(notification_handler, rime);
   rime->api->start_maintenance(true);
 
+  // wait for deploy
+  rime->api->join_maintenance_thread();
+
   rime->session_id = rime->api->create_session();
 
   return em_t;
