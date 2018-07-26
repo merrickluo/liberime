@@ -145,6 +145,7 @@ search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
 
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    return NULL;
   }
 
   rime->api->clear_composition(rime->session_id);
