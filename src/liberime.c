@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <rime_api.h>
-#include <limits.h>
 
 #include <unistd.h>
 
@@ -62,7 +61,7 @@ EmacsRimeCandidates get_candidates(EmacsRime *rime, size_t limit) {
   RimeCandidateListIterator iterator = {0};
   CandidateLinkedList* next = c.list;
   if (rime->api->candidate_list_begin(rime->session_id, &iterator)) {
-    while (rime->api->candidate_list_next(&iterator) && c.size < limit) {
+    while (rime->api->candidate_list_next(&iterator) && (limit == 0 || c.size < limit)) {
       c.size += 1;
 
       next->value = (char *)malloc(CANDIDATE_MAXSTRLEN + 1);
@@ -131,7 +130,7 @@ search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
   char* pinyin = em_get_string(env, args[0]);
 
-  size_t limit = LONG_MAX;
+  size_t limit = 0;
   if (nargs == 2) {
     limit = env->extract_integer(env, args[1]);
   }
