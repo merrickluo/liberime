@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: efun
+# key: efun
+# --
+static emacs_value
+${1: function_name}(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+  $0
+}
