@@ -10,8 +10,6 @@ extern emacs_value em_nil, em_stringp, em_t;
 // Reference types
 extern emacs_value em_direct, em_symbolic;
 
-emacs_value em_user_directory;
-
 /**
  * Initialize the libegit2-emacs interface.
  * This function should only be called once.
@@ -105,5 +103,8 @@ void em_provide(emacs_env *env, const char *feature);
  * @return True iff val is a user pointer.
  */
 bool em_user_ptrp(emacs_env *env, emacs_value val);
+
+
+emacs_value em_list(emacs_env *env, ptrdiff_t array_size, emacs_value* array);
 
 #endif /* INTERFACE_H */
