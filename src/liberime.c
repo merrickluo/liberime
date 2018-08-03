@@ -243,11 +243,8 @@ static emacs_value
 process_key(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
 
-  // use simulate_key_sequence instead of process_key
-  // beacause we dont need to use mask(?)
-  // and convert keycode again
   int keycode = env->extract_integer(env, args[0]);
-  printf("keycode is %d\n", keycode);
+  // printf("keycode is %d\n", keycode);
   // const char* key = em_get_string(env, args[0]);
 
   if (!_ensure_session(rime)) {
@@ -255,9 +252,6 @@ process_key(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
     return em_nil;
   }
 
-  /* if (rime->api->simulate_key_sequence(rime->session_id, key)) { */
-  /*   return em_t; */
-  /* } */
   if (rime->api->process_key(rime->session_id, keycode, 0)) {
     return em_t;
   }
@@ -310,13 +304,11 @@ static emacs_value
 get_commit(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
 
-  printf("hello1?\n");
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
     return em_nil;
   }
 
-  printf("hello2?\n");
   RIME_STRUCT(RimeCommit, commit);
   if (rime->api->get_commit(rime->session_id, &commit)) {
     if (!commit.text) {
@@ -325,7 +317,7 @@ get_commit(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
 
     char* commit_str = _copy_string(commit.text);
     rime->api->free_commit(&commit);
-    printf("commit str is %s\n", commit_str);
+    // printf("commit str is %s\n", commit_str);
 
     return env->make_string(env, commit_str, strlen(commit_str));
   }
