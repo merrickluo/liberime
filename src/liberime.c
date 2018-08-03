@@ -14,6 +14,13 @@
   em_defun(env, ename,                                                  \
            env->make_function(env, min_nargs, max_nargs, cname, doc, data))
 
+#define CONS_INT(key, integer)                                          \
+  em_cons(env, env->intern(env, key), env->make_integer(env, integer));
+#define CONS_STRING(key, str)                                           \
+  em_cons(env, env->intern(env, key), env->make_string(env, str, strlen(str)))
+#define CONS_VALUE(key, value) \
+  em_cons(env, env->intern(env, key), value)
+
 #define CANDIDATE_MAXSTRLEN 1024
 #define SCHEMA_MAXSTRLEN 1024
 
@@ -55,6 +62,14 @@ static bool _ensure_session(EmacsRime *rime) {
   return true;
 }
 
+static char* _copy_string(char* string) {
+  size_t size = strnlen(string, CANDIDATE_MAXSTRLEN);
+  char* new_str = malloc(size+1);
+  strncpy(new_str, string, size);
+  new_str[size] = '\0';
+  return new_str;
+}
+
 EmacsRimeCandidates _get_candidates(EmacsRime *rime, size_t limit) {
   EmacsRimeCandidates c = {.size=0, .list=(CandidateLinkedList *)malloc(sizeof(CandidateLinkedList))};
 
@@ -64,9 +79,7 @@ EmacsRimeCandidates _get_candidates(EmacsRime *rime, size_t limit) {
     while (rime->api->candidate_list_next(&iterator) && (limit == 0 || c.size < limit)) {
       c.size += 1;
 
-      next->value = (char *)malloc(CANDIDATE_MAXSTRLEN + 1);
-      strncpy(next->value, iterator.candidate.text, strnlen(iterator.candidate.text, CANDIDATE_MAXSTRLEN) + 1);
-      next->value[CANDIDATE_MAXSTRLEN] = '\0';
+      next->value = _copy_string(iterator.candidate.text);
       next->next = (CandidateLinkedList *)malloc(sizeof(CandidateLinkedList));
 
       next = next->next;
@@ -138,14 +151,14 @@ search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
       limit = env->extract_integer(env, args[1]);
       // if limit set to 0 return nil immediately
       if (limit == 0) {
-        return NULL;
+        return em_nil;
       }
     }
   }
 
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
-    return NULL;
+    return em_nil;
   }
 
   rime->api->clear_composition(rime->session_id);
@@ -181,13 +194,13 @@ get_schema_list(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data)
   EmacsRime* rime = (EmacsRime*) data;
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
-    return NULL;
+    return em_nil;
   }
 
   RimeSchemaList schema_list;
   if (!rime->api->get_schema_list(&schema_list)) {
     em_signal_rimeerr(env, 1, "Get schema list form librime failed");
-    return NULL;
+    return em_nil;
   }
 
   emacs_value flist = env->intern(env, "list");
@@ -216,13 +229,174 @@ select_schema(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   const char* schema_id = em_get_string(env, args[0]);
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
-    return NULL;
+    return em_nil;
   }
 
   if (rime->api->select_schema(rime->session_id, schema_id)) {
     return em_t;
   }
   return em_nil;
+}
+
+// input
+static emacs_value
+process_key(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+  EmacsRime* rime = (EmacsRime*) data;
+
+  // use simulate_key_sequence instead of process_key
+  // beacause we dont need to use mask(?)
+  // and convert keycode again
+  int keycode = env->extract_integer(env, args[0]);
+  printf("keycode is %d\n", keycode);
+  // const char* key = em_get_string(env, args[0]);
+
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    return em_nil;
+  }
+
+  /* if (rime->api->simulate_key_sequence(rime->session_id, key)) { */
+  /*   return em_t; */
+  /* } */
+  if (rime->api->process_key(rime->session_id, keycode, 0)) {
+    return em_t;
+  }
+  return em_nil;
+}
+
+static emacs_value
+commit_composition(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+  EmacsRime* rime = (EmacsRime*) data;
+
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    return em_nil;
+  }
+
+  if (rime->api->commit_composition(rime->session_id)) {
+    return em_t;
+  }
+  return em_nil;
+}
+
+static emacs_value
+clear_composition(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+  EmacsRime* rime = (EmacsRime*) data;
+
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    return em_nil;
+  }
+
+  rime->api->clear_composition(rime->session_id);
+  return em_t;
+}
+
+static emacs_value
+select_candidate(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+  EmacsRime* rime = (EmacsRime*) data;
+
+  int index = env->extract_integer(env, args[0]);
+
+  if (rime->api->select_candidate_on_current_page(rime->session_id, index)) {
+    return em_t;
+  }
+  return em_nil;
+}
+
+// output
+
+static emacs_value
+get_commit(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+  EmacsRime* rime = (EmacsRime*) data;
+
+  printf("hello1?\n");
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    return em_nil;
+  }
+
+  printf("hello2?\n");
+  RIME_STRUCT(RimeCommit, commit);
+  if (rime->api->get_commit(rime->session_id, &commit)) {
+    if (!commit.text) {
+      return em_nil;
+    }
+
+    char* commit_str = _copy_string(commit.text);
+    rime->api->free_commit(&commit);
+    printf("commit str is %s\n", commit_str);
+
+    return env->make_string(env, commit_str, strlen(commit_str));
+  }
+
+  return em_nil;
+}
+
+static emacs_value
+get_context(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+  EmacsRime* rime = (EmacsRime*) data;
+
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    return em_nil;
+  }
+
+  RIME_STRUCT(RimeContext, context);
+  if (!rime->api->get_context(rime->session_id, &context)){
+    em_signal_rimeerr(env, 2, "cannot get context");
+    return em_nil;
+  }
+
+  if (!context.menu.num_candidates) {
+    return em_nil;
+  }
+
+  size_t result_size = 3;
+  emacs_value* result_a = malloc(sizeof(emacs_value) * result_size);
+
+  // 0. context.commit_text_preview
+  char* ctp_str = _copy_string(context.commit_text_preview);
+  result_a[0] = CONS_STRING("commit-text-preview", ctp_str);
+
+  // 2. context.composition
+  emacs_value* composition_a = malloc(sizeof(emacs_value) * 5);
+  composition_a[0] = CONS_INT("length", context.composition.length);
+  composition_a[1] = CONS_INT("cursor-pos", context.composition.cursor_pos);
+  composition_a[2] = CONS_INT("sel-start", context.composition.sel_start);
+  composition_a[3] = CONS_INT("sel-end", context.composition.sel_end);
+
+  char *preedit_str = _copy_string(context.composition.preedit);
+  composition_a[4] = CONS_STRING("preedit", preedit_str);
+
+  emacs_value composition_value = em_list(env, 5, composition_a);
+  result_a[1] = CONS_VALUE("composition", composition_value);
+
+  // 3. context.menu
+  emacs_value* menu_a = malloc(sizeof(emacs_value) * 6);
+  menu_a[0] = CONS_INT("highlighted-candidate-index", context.menu.highlighted_candidate_index);
+  menu_a[1] = CONS_VALUE("last-page-p", context.menu.is_last_page ? em_t : em_nil);
+  menu_a[2] = CONS_INT("num-candidates", context.menu.num_candidates);
+  menu_a[3] = CONS_INT("page-no", context.menu.page_no);
+  menu_a[4] = CONS_INT("page-size", context.menu.page_size);
+
+  emacs_value* carray = malloc(sizeof(emacs_value) * context.menu.num_candidates);
+  for (int i = 0; i < context.menu.num_candidates; i++) {
+    RimeCandidate c = context.menu.candidates[i];
+    char* ctext = _copy_string(c.text);
+    carray[i] = env->make_string(env, ctext, strlen(ctext));
+  }
+  emacs_value candidates = em_list(env, context.menu.num_candidates, carray);
+  menu_a[5] = CONS_VALUE("candidates", candidates);
+  emacs_value menu = em_list(env, 6, menu_a);
+  result_a[2] = CONS_VALUE("menu", menu);
+
+  // build result
+  emacs_value result = em_list(env, result_size, result_a);
+
+  rime->api->free_context(&context);
+
+  return result;
 }
 
 void liberime_init(emacs_env* env) {
@@ -241,4 +415,14 @@ void liberime_init(emacs_env* env) {
   DEFUN("liberime-search", search, 1, 2, "convert pinyin to candidates", rime);
   DEFUN("liberime-select-schema", select_schema, 1, 1, "select rime schema", rime);
   DEFUN("liberime-get-schema-list", get_schema_list, 0, 0, "list schema list", rime);
+
+  // input
+  DEFUN("liberime-process-key", process_key, 1, 1, "process key", rime);
+  DEFUN("liberime-commit-composition", commit_composition, 0, 0, "commit", rime);
+  DEFUN("liberime-clear-composition", clear_composition, 0, 0, "clear", rime);
+  DEFUN("liberime-select-candidate", select_candidate, 1, 1, "select", rime);
+
+  // output
+  DEFUN("liberime-get-commit", get_commit, 0, 0, "get commit", rime);
+  DEFUN("liberime-get-context", get_context, 0, 0, "get context", rime);
 }
