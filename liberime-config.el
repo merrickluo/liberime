@@ -17,9 +17,12 @@
   ;; param check
   (unless liberime-shared-data-dir
     ;; only guess on linux
-    (if (and (string= system-type "gnu/linux")
-             (file-directory-p "/usr/share/rime-data"))
-        (setq liberime-shared-data-dir "/usr/share/rime-data")))
+    (cond ((and (string= system-type "gnu/linux")
+               (file-directory-p "/usr/share/rime-data"))
+           (setq liberime-shared-data-dir "/usr/share/rime-data"))
+          ((and (string= system-type "darwin")
+                (file-directory-p "/Library/Input Methods/Squirrel.app/Contents/SharedSupport"))
+           (setq liberime-shared-data-dir "/Library/Input Methods/Squirrel.app/Contents/SharedSupport"))))
   (unless liberime-user-data-dir
     ;; defaults to ~/.emacs.d/rime
     (setq liberime-user-data-dir (expand-file-name (concat user-emacs-directory "rime/"))))
