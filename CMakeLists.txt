@@ -7,7 +7,15 @@ set(CMAKE_POSITION_INDEPENDENT_CODE TRUE CACHE BOOL "pic" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "shared" FORCE)
 set(BUILD_CLAR OFF CACHE BOOL "clar" FORCE)
 
-find_library(rime librime.so REQURIED)
+if (APPLE)
+  if (NOT DEFINED ENV{RIME_PATH})
+    message(FATAL_ERROR "Please set enviroment variable RIME_PATH to librime project dir.")
+  endif()
+  link_directories("$ENV{RIME_PATH}/xbuild/lib/Release/")
+  include_directories("$ENV{RIME_PATH}/src")
+elseif (UNIX)
+  find_library(rime librime.so REQURIED)
+endif()
 
 add_library(erime SHARED
   src/interface.c
