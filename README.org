@@ -9,7 +9,7 @@ A emacs dynamic module provide librime bindings for emacs
 ** Build
 
 On Linux:
-#+NAME: Y
+#+NAME: build on linux
 #+BEGIN_SRC shell
 make liberime
 ls build/
@@ -23,7 +23,7 @@ On Darwin
 2. setup environment variable RIME_PATH to librime project dir
 Example: ~export RIME_PATH=~/Develop/others/librime~
 3. build just like on Linux
-#+NAME build on osx
+#+NAME: build on osx
 #+BEGIN_SRC shell
 make liberime
 ls build/
