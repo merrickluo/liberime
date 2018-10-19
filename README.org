@@ -8,6 +8,7 @@ A emacs dynamic module provide librime bindings for emacs
 
 ** Build
 
+On Linux:
 #+NAME: Y
 #+BEGIN_SRC shell
 make liberime
@@ -17,6 +18,19 @@ ls build/
 make test
 #+END_SRC
 
+On Darwin
+1. Build librime following this [[https://github.com/rime/librime/blob/master/README-mac.md][instruction]], you will need xcode (good luck).
+2. setup environment variable RIME_PATH to librime project dir
+Example: ~export RIME_PATH=~/Develop/others/librime~
+3. build just like on Linux
+#+NAME build on osx
+#+BEGIN_SRC shell
+make liberime
+ls build/
+
+# try
+make test
+#+END_SRC
 
 ** Usage
 
