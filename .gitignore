@@ -5,3 +5,5 @@
 
 # cmake build files
 build
+CMakeFiles/
+.envrc

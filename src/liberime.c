@@ -190,6 +190,30 @@ search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
 }
 
 static emacs_value
+get_sync_dir(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+  EmacsRime* rime = (EmacsRime*) data;
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    return em_nil;
+  }
+
+  const char *sync_dir = rime->api->get_sync_dir();
+  return env->make_string(env, sync_dir, strlen(sync_dir));
+}
+
+static emacs_value
+sync_user_data(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+  EmacsRime* rime = (EmacsRime*) data;
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    return em_nil;
+  }
+
+  bool result = rime->api->sync_user_data();
+  return result ? em_t : em_nil;
+}
+
+static emacs_value
 get_schema_list(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
   if (!_ensure_session(rime)) {
@@ -417,4 +441,8 @@ void liberime_init(emacs_env* env) {
   // output
   DEFUN("liberime-get-commit", get_commit, 0, 0, "get commit", rime);
   DEFUN("liberime-get-context", get_context, 0, 0, "get context", rime);
+
+  // sync
+  DEFUN("liberime-get-sync-dir", get_sync_dir, 0, 0, "get sync dir", rime);
+  DEFUN("liberime-sync-user-data", sync_user_data, 0, 0, "sync user data", rime);
 }
