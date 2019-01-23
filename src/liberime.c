@@ -167,6 +167,11 @@ search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRimeCandidates candidates = _get_candidates(rime, limit);
 
   // printf("%s: find candidates size: %ld\n", pinyin, candidates.size);
+  // return nil if no candidates found
+  if (candidates.size == 0) {
+    return em_nil;
+  }
+
   emacs_value* array = malloc(sizeof(emacs_value) * candidates.size);
 
   CandidateLinkedList *next = candidates.list;
