@@ -12,18 +12,18 @@
 
 (defun liberime--load()
   (unless (featurep 'liberime)
-    (load-file librime--module-file))
+    (load-file liberime--module-file))
   (unless (featurep 'liberime)
     (t (error "cannot load librime")))
   (liberime--config))
 
-(defun liberime-build ()
+(defun liberime--build ()
   (set-process-sentinel
    (start-process "liberime-build" "*liberime build*" "make")
    (lambda (proc _event)
      (when (eq 'exit (process-status proc))
        (if (= 0 (process-exit-status proc))
-           (liberime-load)
+           (liberime--load)
          (pop-to-buffer "*liberime build*")
          (error "liberime: building failed with exit code %d" (process-exit-status proc)))))))
 
@@ -59,7 +59,7 @@
     (error "Module support not detected, liberime can't work"))
   (cond
    ((file-exists-p liberime--module-file) (liberime--load))
-   ((y-or-n-p "librime must be built, do so now?") (liberime--build))
+   ((y-or-n-p "liberime must be built, do so now?") (liberime--build))
    (t (error "liberime not loaded"))))
 
 ;; TODO how autoload work?
