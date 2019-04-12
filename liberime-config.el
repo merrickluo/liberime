@@ -4,16 +4,30 @@
 (defvar liberime-user-data-dir nil)
 (defvar liberime-search-candidate-limit nil)
 
-;;;###autoload
-(defun liberime-config-load ()
-  ;; dynamic module load
-  (unless module-file-suffix
-    (error "Module support not detected, liberime can't work"))
+(defvar liberime--root
+  (file-name-directory (or load-file-name buffer-file-name)))
 
-  (let* ((liberime-root (file-name-directory (or load-file-name buffer-file-name)))
-         (module-file (concat liberime-root "build/liberime" module-file-suffix)))
-    (load-file module-file))
+(defvar liberime--module-file
+  (concat liberime--root "build/liberime" module-file-suffix))
 
+(defun liberime--load()
+  (unless (featurep 'liberime)
+    (load-file librime--module-file))
+  (unless (featurep 'liberime)
+    (t (error "cannot load librime")))
+  (liberime--config))
+
+(defun liberime-build ()
+  (set-process-sentinel
+   (start-process "liberime-build" "*liberime build*" "make")
+   (lambda (proc _event)
+     (when (eq 'exit (process-status proc))
+       (if (= 0 (process-exit-status proc))
+           (liberime-load)
+         (pop-to-buffer "*liberime build*")
+         (error "liberime: building failed with exit code %d" (process-exit-status proc)))))))
+
+(defun liberime--config ()
   ;; param check
   (unless liberime-shared-data-dir
     ;; only guess on linux
@@ -29,7 +43,6 @@
   (unless (or liberime-shared-data-dir liberime-user-data-dir)
       (error "Please set liberime-shared-data-dir and liberime-user-data-dir"))
 
-
   ;; use liberime-search-candidate-limit if not provided
   (defun limited-liberime-search (search &rest arguments)
     (let ((pinyin (car arguments))
@@ -39,7 +52,17 @@
 
   (liberime-start liberime-shared-data-dir liberime-user-data-dir))
 
+;;;###autoload
+(defun liberime-load ()
+  (interactive)
+  (unless module-file-suffix
+    (error "Module support not detected, liberime can't work"))
+  (cond
+   ((file-exists-p liberime--module-file) (liberime--load))
+   ((y-or-n-p "librime must be built, do so now?") (liberime--build))
+   (t (error "liberime not loaded"))))
+
 ;; TODO how autoload work?
-(liberime-config-load)
+(liberime-load)
 
 (provide 'liberime-config)
