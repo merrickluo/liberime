@@ -18,14 +18,15 @@
   (liberime--config))
 
 (defun liberime--build ()
-  (set-process-sentinel
-   (start-process "liberime-build" "*liberime build*" "make")
-   (lambda (proc _event)
-     (when (eq 'exit (process-status proc))
-       (if (= 0 (process-exit-status proc))
-           (liberime--load)
-         (pop-to-buffer "*liberime build*")
-         (error "liberime: building failed with exit code %d" (process-exit-status proc)))))))
+  (let ((default-directory liberime--root))
+    (set-process-sentinel
+     (start-process "liberime-build" "*liberime build*" "make")
+     (lambda (proc _event)
+       (when (eq 'exit (process-status proc))
+         (if (= 0 (process-exit-status proc))
+             (liberime--load)
+           (pop-to-buffer "*liberime build*")
+           (error "liberime: building failed with exit code %d" (process-exit-status proc))))))))
 
 (defun liberime--config ()
   ;; param check
