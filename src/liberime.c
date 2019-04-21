@@ -104,8 +104,8 @@ static emacs_value
 start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime *rime = (EmacsRime*) data;
 
-  char* shared_data_dir = em_get_string(env, args[0]);
-  char* user_data_dir = em_get_string(env, args[1]);
+  char* shared_data_dir = em_get_string(env, em_expand_file_name(env, args[0]));
+  char* user_data_dir = em_get_string(env, em_expand_file_name(env, args[1]));
 
   RIME_STRUCT(RimeTraits, emacs_rime_traits);
 
