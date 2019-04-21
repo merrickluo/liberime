@@ -30,6 +30,7 @@ typedef struct _EmacsRime {
   RimeSessionId session_id;
   RimeApi* api;
   bool firstRun;
+  emacs_env* EmacsEnv;
 } EmacsRime;
 
 typedef struct _CandidateLinkedList {
@@ -46,8 +47,15 @@ void notification_handler(void *context,
                           RimeSessionId session_id,
                           const char* message_type,
                           const char* message_value) {
-  // TODO send message to emacs
-  printf("librime notification: %s: %s\n", message_type, message_value);
+  EmacsRime *rime = (EmacsRime*) context;
+  emacs_env *env = rime->EmacsEnv;
+  emacs_value *args = malloc(sizeof(emacs_value) * 3);
+  char *format = "[liberime] %s: %s";
+  args[0] = env->make_string(env, format, strnlen(format, SCHEMA_MAXSTRLEN));
+  args[1] = env->make_string(env, message_type, strnlen(message_type, SCHEMA_MAXSTRLEN));
+  args[2] = env->make_string(env, message_value, strnlen(message_value, SCHEMA_MAXSTRLEN));
+  env->funcall(env, env->intern (env, "message"), 3, args);
+  free(args);
 }
 
 // unused for now
@@ -113,6 +121,8 @@ start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void* data) {
   }
 
   rime->api->initialize(&emacs_rime_traits);
+  // Let notification_handler can access emacs_env
+  rime->EmacsEnv = env;
   rime->api->set_notification_handler(notification_handler, rime);
   rime->api->start_maintenance(true);
 
