@@ -12,7 +12,7 @@
 
 /**
  * Macro that defines a docstring for a function.
- * @param name The function name (without egit_ prefix).
+ * @param name The function name (without liberime_ prefix).
  * @param args The argument list as visible from Emacs (without parens).
  * @param docstring The rest of the documentation.
  */
