@@ -10,9 +10,21 @@
 #include "interface.h"
 #include "liberime.h"
 
-#define DEFUN(ename, cname, min_nargs, max_nargs, doc, data)            \
-  em_defun(env, ename,                                                  \
-           env->make_function(env, min_nargs, max_nargs, cname, doc, data))
+/**
+ * Macro that defines a docstring for a function.
+ * @param name The function name (without egit_ prefix).
+ * @param args The argument list as visible from Emacs (without parens).
+ * @param docstring The rest of the documentation.
+ */
+#define DOCSTRING(name, args, docstring)                                \
+const char *liberime_##name##__doc = (docstring "\n\n(fn " args ")")
+
+#define DEFUN(ename, cname, min_nargs, max_nargs)                       \
+  em_defun(env, (ename),                                                \
+           env->make_function(env, (min_nargs), (max_nargs),            \
+                              cname,                                    \
+                              liberime_##cname##__doc,                  \
+                              rime))
 
 #define CONS_INT(key, integer)                                          \
   em_cons(env, env->intern(env, key), env->make_integer(env, integer));
@@ -100,8 +112,9 @@ EmacsRimeCandidates _get_candidates(EmacsRime *rime, size_t limit) {
 }
 
 // bindings
-static emacs_value
-start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void* data) {
+DOCSTRING(start, "SHARED_DATA_DIR USER_DATA_DIR",
+          "Start a rime session");
+static emacs_value start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime *rime = (EmacsRime*) data;
 
   char* shared_data_dir = em_get_string(env, em_expand_file_name(env, args[0]));
@@ -159,8 +172,8 @@ void free_candidate_list(CandidateLinkedList *list) {
   }
 }
 
-static emacs_value
-get_sync_dir(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+DOCSTRING(get_sync_dir, "", "get sync dir");
+static emacs_value get_sync_dir(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -171,8 +184,8 @@ get_sync_dir(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   return env->make_string(env, sync_dir, strlen(sync_dir));
 }
 
-static emacs_value
-sync_user_data(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+DOCSTRING(sync_user_data, "", "Sync user data");
+static emacs_value sync_user_data(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -183,8 +196,8 @@ sync_user_data(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) 
   return result ? em_t : em_nil;
 }
 
-static emacs_value
-get_schema_list(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+DOCSTRING(get_schema_list, "", "List all rime schema.");
+static emacs_value get_schema_list(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -217,8 +230,10 @@ get_schema_list(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data)
   return result;
 }
 
-static emacs_value
-select_schema(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+DOCSTRING(select_schema, "SCHEMA_ID",
+            "Select a rime schema.\n"
+            "SCHENA_ID should be a value returned from `liberime-get-schema-list'.");
+static emacs_value select_schema(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
   const char* schema_id = em_get_string(env, args[0]);
   if (!_ensure_session(rime)) {
@@ -233,8 +248,8 @@ select_schema(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
 }
 
 // input
-static emacs_value
-process_key(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+DOCSTRING(process_key, "KEY", "process key");
+static emacs_value process_key(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
 
   int keycode = env->extract_integer(env, args[0]);
@@ -252,8 +267,8 @@ process_key(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   return em_nil;
 }
 
-static emacs_value
-commit_composition(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+DOCSTRING(commit_composition, "", "Commit");
+static emacs_value commit_composition(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
 
   if (!_ensure_session(rime)) {
@@ -267,8 +282,8 @@ commit_composition(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* da
   return em_nil;
 }
 
-static emacs_value
-clear_composition(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+DOCSTRING(clear_composition, "", "Clear");
+static emacs_value clear_composition(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
 
   if (!_ensure_session(rime)) {
@@ -280,8 +295,8 @@ clear_composition(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* dat
   return em_t;
 }
 
-static emacs_value
-select_candidate(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+DOCSTRING(select_candidate, "NUM", "Select");
+static emacs_value select_candidate(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
 
   int index = env->extract_integer(env, args[0]);
@@ -294,8 +309,8 @@ select_candidate(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data
 
 // output
 
-static emacs_value
-get_commit(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+DOCSTRING(get_commit, "", "Get commit");
+static emacs_value get_commit(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
 
   if (!_ensure_session(rime)) {
@@ -319,8 +334,8 @@ get_commit(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   return em_nil;
 }
 
-static emacs_value
-get_context(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
+DOCSTRING(get_context, "", "Get context");
+static emacs_value get_context(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
   EmacsRime* rime = (EmacsRime*) data;
 
   if (!_ensure_session(rime)) {
@@ -386,6 +401,8 @@ get_context(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
 }
 
 void liberime_init(emacs_env* env) {
+  // Name 'rime' is hardcode in DEFUN micro, so if you edit here,
+  // you should edit DEFUN micro too.
   EmacsRime* rime = (EmacsRime*) malloc(sizeof(EmacsRime));
 
   rime->api = rime_get_api();
@@ -396,23 +413,24 @@ void liberime_init(emacs_env* env) {
     em_signal_rimeerr(env, 1, "No librime found");
     return;
   }
-
-  DEFUN("liberime-start", start, 2, 2, "start rime session", rime);
-  DEFUN("liberime-select-schema", select_schema, 1, 1, "select rime schema", rime);
-  DEFUN("liberime-get-schema-list", get_schema_list, 0, 0, "list schema list", rime);
+ 
+  DEFUN("liberime-start", start, 2, 2);
+  DEFUN("liberime-select-schema", select_schema, 1, 1);
+  DEFUN("liberime-get-schema-list", get_schema_list, 0, 0);
 
   // input
-  DEFUN("liberime-process-key", process_key, 1, 1, "process key", rime);
-  DEFUN("liberime-commit-composition", commit_composition, 0, 0, "commit", rime);
-  DEFUN("liberime-clear-composition", clear_composition, 0, 0, "clear", rime);
-  DEFUN("liberime-select-candidate", select_candidate, 1, 1, "select", rime);
+  DEFUN("liberime-process-key", process_key, 1, 1);
+  DEFUN("liberime-commit-composition", commit_composition, 0, 0);
+  DEFUN("liberime-clear-composition", clear_composition, 0, 0);
+  DEFUN("liberime-select-candidate", select_candidate, 1, 1);
 
   // output
-  DEFUN("liberime-get-commit", get_commit, 0, 0, "get commit", rime);
-  DEFUN("liberime-get-context", get_context, 0, 0, "get context", rime);
+  DEFUN("liberime-get-commit", get_commit, 0, 0);
+  DEFUN("liberime-get-context", get_context, 0, 0);
 
   // sync
-  DEFUN("liberime-get-sync-dir", get_sync_dir, 0, 0, "get sync dir", rime);
-  DEFUN("liberime-sync-user-data", sync_user_data, 0, 0, "sync user data", rime);
-  DEFUN("liberime-finalize", finalize, 0, 0, "finalize librime for redeploy", rime);
+  DEFUN("liberime-get-sync-dir", get_sync_dir, 0, 0);
+  DEFUN("liberime-sync-user-data", sync_user_data, 0, 0);
+  DEFUN("liberime-finalize", finalize, 0, 0);
+
 }
