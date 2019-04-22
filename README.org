@@ -1,14 +1,13 @@
-#+TITLE: liberime README
+#+TITLE: liberime [开发中]
 
-* liberime [开发中]
+* Introduce
 
 A emacs dynamic module provide librime bindings for emacs
 
 目前只实现了几个方法，理想情况是暴露所有 librime 的 API 到 emacs-lisp.
 
-** Build
-
-*** Build On Linux:
+* Build
+** Build On Linux:
 #+NAME: build on linux
 #+BEGIN_SRC shell
 make liberime
@@ -18,11 +17,13 @@ ls build/
 make test
 #+END_SRC
 
-*** Build On Darwin
+** Build On Darwin
 1. Build librime following this [[https://github.com/rime/librime/blob/master/README-mac.md][instruction]], you will need xcode (good luck).
-2. setup environment variable RIME_PATH to librime project dir
-   Example: ~export RIME_PATH=~/Develop/others/librime~
-3. build just like on Linux
+2. Setup environment variable RIME_PATH to librime project dir, for example:
+   #+begin_src shell
+   export RIME_PATH=~/Develop/others/librime
+   #+end_src
+3. Build just like on Linux
    #+NAME: build on osx
    #+BEGIN_SRC shell
    make liberime
@@ -32,12 +33,8 @@ make test
    make test
    #+END_SRC
 
-** Usage
-
-*** Initialize
-    :PROPERTIES:
-    :ORDERED:  t
-    :END:
+* Usage
+** Initialize
 
 shared_data_dir:
 librime 安装后提供的共享数据，里面会有预置的 schema 等 [[https://github.com/rime/home/wiki/SharedData][各平台所在位置详情]]。
@@ -87,12 +84,12 @@ user_data_dir:
   (setq pyim-default-scheme 'rime))
 #+END_SRC
 
-*** Avaliable methods
+** Avaliable methods
 
-**** (liberime-start shared_data_dir user_data_dir)
+*** (liberime-start shared_data_dir user_data_dir)
 initialize deploy and started a session with librime
 returns t if success report error otherwise
-**** (liberime-get-schema-list)
+*** (liberime-get-schema-list)
 returns list of pairs(list of (schema_id, schema_name) ) avaliable schema
 
 Example output(prebuilt schemas)
@@ -100,7 +97,7 @@ Example output(prebuilt schemas)
 (liberime-get-schema-list)
 ;; (("luna_pinyin" "朙月拼音") ("luna_pinyin_simp" "朙月拼音·简化字") ("luna_pinyin_fluency" "朙月拼音·語句流") ("bopomofo" "注音") ("bopomofo_tw" "注音·臺灣正體") ("cangjie5" "倉頡五代") ("stroke" "五筆畫") ("terra_pinyin" "地球拼音"))
 #+END_SRC
-**** (liberime-select-schema schema_id)
+*** (liberime-select-schema schema_id)
 should use schema_id returns from libeliberime-get-schema-list
 returns t if success, report error otherwise
 
