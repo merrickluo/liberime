@@ -210,20 +210,18 @@ static emacs_value get_schema_list(emacs_env *env, ptrdiff_t nargs, emacs_value 
   }
 
   emacs_value flist = env->intern(env, "list");
-  emacs_value *array = malloc(sizeof(emacs_value) * schema_list.size);
+  emacs_value array[schema_list.size];
   for (int i = 0; i < schema_list.size; i++) {
     RimeSchemaListItem item = schema_list.list[i];
-    emacs_value *pair = malloc(sizeof(emacs_value) * 2);
+    emacs_value pair[2];
     pair[0] = env->make_string(env, item.schema_id, strnlen(item.schema_id, SCHEMA_MAXSTRLEN));
     pair[1] = env->make_string(env, item.name, strnlen(item.name, SCHEMA_MAXSTRLEN));
 
     array[i] = env->funcall(env, flist, 2, pair);
-    free(pair);
   }
 
   emacs_value result = env->funcall(env, flist, schema_list.size, array);
 
-  free(array);
   rime->api->free_schema_list(&schema_list);
 
   return result;
@@ -353,14 +351,14 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
   }
 
   size_t result_size = 3;
-  emacs_value *result_a = malloc(sizeof(emacs_value) * result_size);
+  emacs_value result_a[result_size];
 
   // 0. context.commit_text_preview
   char *ctp_str = _copy_string(context.commit_text_preview);
   result_a[0] = CONS_STRING("commit-text-preview", ctp_str);
 
   // 2. context.composition
-  emacs_value *composition_a = malloc(sizeof(emacs_value) * 5);
+  emacs_value composition_a[5];
   composition_a[0] = CONS_INT("length", context.composition.length);
   composition_a[1] = CONS_INT("cursor-pos", context.composition.cursor_pos);
   composition_a[2] = CONS_INT("sel-start", context.composition.sel_start);
@@ -373,14 +371,14 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
   result_a[1] = CONS_VALUE("composition", composition_value);
 
   // 3. context.menu
-  emacs_value *menu_a = malloc(sizeof(emacs_value) * 6);
+  emacs_value menu_a[6];
   menu_a[0] = CONS_INT("highlighted-candidate-index", context.menu.highlighted_candidate_index);
   menu_a[1] = CONS_VALUE("last-page-p", context.menu.is_last_page ? em_t : em_nil);
   menu_a[2] = CONS_INT("num-candidates", context.menu.num_candidates);
   menu_a[3] = CONS_INT("page-no", context.menu.page_no);
   menu_a[4] = CONS_INT("page-size", context.menu.page_size);
 
-  emacs_value *carray = malloc(sizeof(emacs_value) * context.menu.num_candidates);
+  emacs_value carray[context.menu.num_candidates];
   for (int i = 0; i < context.menu.num_candidates; i++) {
     RimeCandidate c = context.menu.candidates[i];
     char *ctext = _copy_string(c.text);
