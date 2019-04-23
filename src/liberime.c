@@ -61,13 +61,12 @@ void notification_handler(void *context,
                           const char *message_value) {
   EmacsRime *rime = (EmacsRime*) context;
   emacs_env *env = rime->EmacsEnv;
-  emacs_value *args = malloc(sizeof(emacs_value) * 3);
-  char *format = "[liberime] %s: %s";
+  char format[] = "[liberime] %s: %s";
+  emacs_value args[3];
   args[0] = env->make_string(env, format, strnlen(format, SCHEMA_MAXSTRLEN));
   args[1] = env->make_string(env, message_type, strnlen(message_type, SCHEMA_MAXSTRLEN));
   args[2] = env->make_string(env, message_value, strnlen(message_value, SCHEMA_MAXSTRLEN));
   env->funcall(env, env->intern (env, "message"), 3, args);
-  free(args);
 }
 
 // unused for now
