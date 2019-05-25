@@ -35,6 +35,9 @@ make test
 ** Usage
 
 *** Initialize
+    :PROPERTIES:
+    :ORDERED:  t
+    :END:
 
 shared_data_dir:
 librime 安装后提供的共享数据，里面会有预置的 schema 等 [[https://github.com/rime/home/wiki/SharedData][各平台所在位置详情]]。
@@ -46,21 +49,42 @@ user_data_dir:
 也许会有冲突）
 
 
-通过 use-package 加载
+通过 use-package + quelpa加载
+注意add-hook一定要放在:init block里面
 
-#+NAME: Y
+#+NAME use git fetcher
 #+BEGIN_SRC emacs-lisp
-(use-package liberime
-  :load-path "path to liberime.so/liberime.dll"
-  :config
-  (defun setup-liberime ()
-    ;; incase hooks not running
-    (interactive)
-    (liberime-start "$shared_data_dir" "$user_data_dir")
-    (liberime-select-schema "luna_pinyin_simp")))
+(use-package liberime-config
+  :quelpa (liberime-config
+           :fetcher git
+           :url "https://gitlab.com/liberime/liberime"
+           :files ("CMakeLists.txt" "Makefile" "src" "liberime-config.el"))
+  :init
+  (add-hook 'after-liberime-load-hook
+            (lambda ()
+              (liberime-select-schema "luna_pinyin_simp"))))
+#+END_SRC
 
-;; work with pyim
-(add-hook 'pyim-load-hook 'setup-liberime) ;; or set with use-package
+#+NAME: use local folder
+#+BEGIN_SRC emacs-lisp
+(use-package liberime-config
+  :quelpa (liberime-config
+           :fetcher file
+           :path "~/Develop/emacs/liberime"
+           :files ("CMakeLists.txt" "Makefile" "src" "liberime-config.el"))
+  :init
+  (add-hook 'after-liberime-load-hook
+            (lambda ()
+              (liberime-select-schema "luna_pinyin_simp"))))
+#+END_SRC
+
+#+NAME setup pyim
+#+BEGIN_SRC emacs-lisp
+(use-package pyim
+  :after liberime-config
+  :config
+  (setq default-input-method "pyim")
+  (setq pyim-default-scheme 'rime))
 #+END_SRC
 
 *** Avaliable methods
