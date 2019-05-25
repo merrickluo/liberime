@@ -24,12 +24,18 @@
 (defvar liberime--module-file
   (concat liberime--root "build/liberime" module-file-suffix))
 
+(defcustom after-liberime-load-hook nil
+  "List of functions to be called before quelpa."
+  :group 'liberime
+  :type 'hook)
+
 (defun liberime--load()
   (unless (featurep 'liberime)
     (load-file liberime--module-file))
   (unless (featurep 'liberime)
     (t (error "cannot load librime")))
-  (liberime--config))
+  (liberime--config)
+  (run-hooks 'after-liberime-load-hook))
 
 (defun liberime--build ()
   (let ((default-directory liberime--root))
@@ -77,7 +83,6 @@
    ((y-or-n-p "liberime must be built, do so now?") (liberime--build))
    (t (error "liberime not loaded"))))
 
-;; TODO how autoload work?
 (liberime-load)
 
 (provide 'liberime-config)
