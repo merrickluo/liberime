@@ -7,10 +7,16 @@
        (- (float-time) ,start))))
 
 (require 'liberime)
-(liberime-start "/usr/share/rime-data" (expand-file-name "~/.emacs.d/rime"))
+;; darwin
+(setq rime-data-dir "/Library/Input Methods/Squirrel.app/Contents/SharedSupport")
+;; linux
+(setq rime-data-dir "/usr/share/rime-data")
+
+(liberime-start rime-data-dir (expand-file-name "~/.emacs.d/test/rime"))
 (liberime-get-schema-list)
 (liberime-select-schema "luna_pinyin_simp")
 (liberime-search "wode" nil)
+(liberime-finalize)
 
 
 (require 'pyim)

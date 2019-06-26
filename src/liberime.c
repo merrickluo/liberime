@@ -124,6 +124,17 @@ start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void* data) {
   return em_t;
 }
 
+static emacs_value
+finalize(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void* data) {
+  EmacsRime *rime = (EmacsRime*) data;
+  if (rime->session_id) {
+    rime->api->sync_user_data();
+    rime->session_id = 0;
+  }
+  rime->api->finalize();
+  return em_t;
+}
+
 void free_candidate_list(CandidateLinkedList *list) {
   CandidateLinkedList* next = list;
   while (next) {
@@ -450,4 +461,5 @@ void liberime_init(emacs_env* env) {
   // sync
   DEFUN("liberime-get-sync-dir", get_sync_dir, 0, 0, "get sync dir", rime);
   DEFUN("liberime-sync-user-data", sync_user_data, 0, 0, "sync user data", rime);
+  DEFUN("liberime-finalize", finalize, 0, 0, "finalize librime for redeploy", rime);
 }

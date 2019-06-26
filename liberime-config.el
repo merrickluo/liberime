@@ -73,6 +73,12 @@
 
   (liberime-start liberime-shared-data-dir liberime-user-data-dir))
 
+(defun liberime-redeploy()
+  "redeploy liberime to affect config file change"
+  (interactive)
+  (liberime-finalize)
+  (liberime--config))
+
 ;;;###autoload
 (defun liberime-load ()
   (interactive)
