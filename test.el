@@ -18,7 +18,8 @@
 (liberime-select-schema "luna_pinyin_simp")
 (liberime-search "wode" nil)
 (liberime-finalize)
-
+(liberime-get-config "default" "menu/page_size" "int")
+(liberime-set-config "default" "menu/page_size" 100 "int")
 
 (require 'pyim)
 (setq pyim-default-scheme 'quanpin)
