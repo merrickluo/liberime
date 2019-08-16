@@ -92,6 +92,10 @@
   (liberime-finalize)
   (liberime--config))
 
+(defun liberime-set-page-size (page-size)
+  (liberime-set-config "default.custom" "patch/menu/page_size" 100 "int")
+  (liberime-redeploy))
+
 ;;;###autoload
 (defun liberime-load ()
   (interactive)
