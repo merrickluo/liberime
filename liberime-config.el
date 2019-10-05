@@ -13,9 +13,8 @@
 ;;; Code:
 
 (require 'nadvice)
+(require 'cl-lib)
 
-(defvar liberime-shared-data-dir nil)
-(defvar liberime-user-data-dir nil)
 (defvar liberime-search-candidate-limit nil)
 
 (defvar liberime--root
@@ -28,6 +27,29 @@
   "List of functions to be called before quelpa."
   :group 'liberime
   :type 'hook)
+
+(defcustom liberime-shared-data-dir
+  ;; only guess on linux
+  (cl-case system-type
+    ('gnu/linux
+     (cl-some (lambda (parent)
+                (let ((dir (expand-file-name "rime-data" parent)))
+                  (when (file-directory-p dir)
+                    dir)))
+              (if (fboundp 'xdg-data-dirs)
+                  (xdg-data-dirs)
+                '("/usr/share/local" "/usr/share"))))
+    ('darwin
+     "/Library/Input Methods/Squirrel.app/Contents/SharedSupport"))
+  "Data directory on the system."
+  :group 'liberime
+  :type 'file)
+
+(defcustom liberime-user-data-dir
+  (locate-user-emacs-file "rime/")
+  "Data directory on the user home directory."
+  :group 'liberime
+  :type 'file)
 
 (defun liberime--load()
   (unless (featurep 'liberime)
@@ -49,20 +71,11 @@
            (error "liberime: building failed with exit code %d" (process-exit-status proc))))))))
 
 (defun liberime--config ()
-  ;; param check
-  (unless liberime-shared-data-dir
-    ;; only guess on linux
-    (cond ((and (string= system-type "gnu/linux")
-               (file-directory-p "/usr/share/rime-data"))
-           (setq liberime-shared-data-dir "/usr/share/rime-data"))
-          ((and (string= system-type "darwin")
-                (file-directory-p "/Library/Input Methods/Squirrel.app/Contents/SharedSupport"))
-           (setq liberime-shared-data-dir "/Library/Input Methods/Squirrel.app/Contents/SharedSupport"))))
-  (unless liberime-user-data-dir
-    ;; defaults to ~/.emacs.d/rime
-    (setq liberime-user-data-dir (expand-file-name (concat user-emacs-directory "rime/"))))
-  (unless (or liberime-shared-data-dir liberime-user-data-dir)
-      (error "Please set liberime-shared-data-dir and liberime-user-data-dir"))
+  (unless (or (and liberime-shared-data-dir
+                   (file-directory-p liberime-shared-data-dir))
+              (and liberime-user-data-dir
+                   (file-directory-p liberime-user-data-dir)))
+    (user-error "Please set liberime-shared-data-dir or liberime-user-data-dir"))
 
   ;; use liberime-search-candidate-limit if not provided
   (defun limited-liberime-search (search &rest arguments)
