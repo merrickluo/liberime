@@ -146,8 +146,8 @@ static emacs_value start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], vo
   return em_t;
 }
 
-static emacs_value
-finalize(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void* data) {
+DOCSTRING(finalize, "", "finalize librime for redeploy");
+static emacs_value finalize(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
   if (rime->session_id) {
     rime->api->sync_user_data();
