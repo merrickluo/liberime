@@ -6,6 +6,10 @@ A emacs dynamic module provide librime bindings for emacs
 
 目前只实现了几个方法，理想情况是暴露所有 librime 的 API 到 emacs-lisp.
 
+* Require
+1. emacs 需要启用支持动态模块，在编译的时候使用 --with-modules 选项。
+2. librime 版本 > 1.3.2
+
 * Build
 ** Build On Linux:
 #+NAME: build on linux
