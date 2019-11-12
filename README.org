@@ -1,14 +1,17 @@
-* liberime [开发中]
+#+TITLE: liberime [开发中]
+
+* Introduce
 
 A emacs dynamic module provide librime bindings for emacs
 
-目前只实现了几个方法，以及新加一个 librime 没有的方法 liberime-search 方便 [[https://github.com/tumashu/pyim][pyim]] 集成。
+目前只实现了几个方法，理想情况是暴露所有 librime 的 API 到 emacs-lisp.
 
-理想情况是暴露所有 librime 的 API 到 emacs-lisp;
+* Require
+1. emacs 需要启用支持动态模块，在编译的时候使用 --with-modules 选项。
+2. librime 版本 > 1.3.2
 
-** Build
-
-On Linux:
+* Build
+** Build On Linux:
 #+NAME: build on linux
 #+BEGIN_SRC shell
 make liberime
@@ -18,26 +21,24 @@ ls build/
 make test
 #+END_SRC
 
-On Darwin
+** Build On Darwin
 1. Build librime following this [[https://github.com/rime/librime/blob/master/README-mac.md][instruction]], you will need xcode (good luck).
-2. setup environment variable RIME_PATH to librime project dir
-Example: ~export RIME_PATH=~/Develop/others/librime~
-3. build just like on Linux
-#+NAME: build on osx
-#+BEGIN_SRC shell
-make liberime
-ls build/
+2. Setup environment variable RIME_PATH to librime project dir, for example:
+   #+begin_src shell
+   export RIME_PATH=~/Develop/others/librime
+   #+end_src
+3. Build just like on Linux
+   #+NAME: build on osx
+   #+BEGIN_SRC shell
+   make liberime
+   ls build/
+   
+   # try
+   make test
+   #+END_SRC
 
-# try
-make test
-#+END_SRC
-
-** Usage
-
-*** Initialize
-    :PROPERTIES:
-    :ORDERED:  t
-    :END:
+* Usage
+** Initialize
 
 shared_data_dir:
 librime 安装后提供的共享数据，里面会有预置的 schema 等 [[https://github.com/rime/home/wiki/SharedData][各平台所在位置详情]]。
@@ -87,24 +88,12 @@ user_data_dir:
   (setq pyim-default-scheme 'rime))
 #+END_SRC
 
-*** Avaliable methods
+** Avaliable methods
 
-**** (liberime-start shared_data_dir user_data_dir)
+*** (liberime-start shared_data_dir user_data_dir)
 initialize deploy and started a session with librime
 returns t if success report error otherwise
-**** (liberime-search pinyin &optional limit)
-returns list of limit count of candidates for pinyin,
-returns all if limit not set or set to nil
-
-Example output:
-#+BEGIN_SRC emacs-lisp
-(liberime-search "shurufa")
-;; ("输入法" "输入" "澍濡" "菽乳" "竖儒" "书" "数" "树" "输" "属" "熟" "术" "舒" "鼠" "叔" "束" "淑" "疏" "署" "述" "竖" "蜀" "梳" "孰" "殊" "恕" "姝" "墅" "赎" "薯" "暑" "洙" "漱" "庶" "枢" "抒" "曙" "戍" "蔬" "嗽" "澍" "倏" "黍" "纾" "塾" "菽" "沭" "殳" "樗" "秫" "摭" "鼡" "鸀" "翛" "腧" "悆" "儵" "尗" "糬" "𦈌" "摅" "俆" "掓" "侸" "癙" "疎" "荗" "钃" "忬" "𡠟" "婌" "毹" "襡" "暏" "潻" "倐" "摴" "䉤" "潄" "鯈" "踈" "蒣" "璹" "鉥" "埱" "橾" "訹" "鏣" "嫬" "蒁" "捒" "疋" "尌" "𧑏" "藲" "祋" "丨" "襩" "薥" "裋" "𨐅" "杸" "焂" "鈙" "陎" "鮛" "灟" "跾" "庻" "虪" "錰" "濖" "鶐" "瘶" "毺" "鵨" "权" "𫉄" "𣉛" "瀭" "𤴙" "𢋂" "𡱆" "𢞣" "𤱐" "𢠫" "𢧇" "𣀻" "𤍓" "𣏗" "𣤯" "𣰿" "𤞉" "𤘷" "𣻚" "𤗪" "𤕟" "𩢻" "𫌋" "𧠣" "𧼯" "𨁀" "𨅒" "𨔦" "𨛭" "𨶝" "𨷙" "𨽉" "𩛅" "𧞀" "𩪍" "𩳅" "𩷌" "𩾈" "𪅰" "𪌶" "𪐧" "鱪" "蠴" "鱰" "㑐" "𦠦" "𥌚" "𥍝" "𥞃" "𥣋" "𥳕" "𥿇" "𦈷" "𦍄" "𦐣" "𦒶" "𤻃" "𦤂" "𦶕" "𦺗" "𦺪" "𧁿" "𧄔" "𧇝" "𧊠" "𧑓" "𧒑" "𧗱" "䝪" "㾁" "䃞" "䇬" "䉀" "䑕" "䘤" "䜹" "䝂" "㽰" "䞖" "䠼" "䢞" "䢤" "䨹" "䩱")
-(liberime-search "shurufa" 10)
-;; ("输入法" "输入" "澍濡" "菽乳" "竖儒" "书" "数" "树" "输" "属")
-#+END_SRC
-
-**** (liberime-get-schema-list)
+*** (liberime-get-schema-list)
 returns list of pairs(list of (schema_id, schema_name) ) avaliable schema
 
 Example output(prebuilt schemas)
@@ -112,7 +101,7 @@ Example output(prebuilt schemas)
 (liberime-get-schema-list)
 ;; (("luna_pinyin" "朙月拼音") ("luna_pinyin_simp" "朙月拼音·简化字") ("luna_pinyin_fluency" "朙月拼音·語句流") ("bopomofo" "注音") ("bopomofo_tw" "注音·臺灣正體") ("cangjie5" "倉頡五代") ("stroke" "五筆畫") ("terra_pinyin" "地球拼音"))
 #+END_SRC
-**** (liberime-select-schema schema_id)
+*** (liberime-select-schema schema_id)
 should use schema_id returns from libeliberime-get-schema-list
 returns t if success, report error otherwise
 
