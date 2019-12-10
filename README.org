@@ -32,7 +32,7 @@ make test
    #+BEGIN_SRC shell
    make liberime
    ls build/
-   
+
    # try
    make test
    #+END_SRC
@@ -46,8 +46,7 @@ librime 安装后提供的共享数据，里面会有预置的 schema 等 [[http
 user_data_dir:
 推荐放在 "~/.emacs.d/rime",
 
-或者可以尝试使用外置输入法用的文件夹，比如Fcitx: "~/.config/fcitx/rime" 。（没测试过
-也许会有冲突）
+或者可以尝试使用外置输入法用的文件夹，比如Fcitx: "~/.config/fcitx/rime" 。（没测试过也许会有冲突）
 
 
 通过 use-package + quelpa加载
@@ -57,8 +56,8 @@ user_data_dir:
 #+BEGIN_SRC emacs-lisp
 (use-package liberime-config
   :quelpa (liberime-config
-           :fetcher git
-           :url "https://gitlab.com/liberime/liberime"
+           :fetcher github
+           :repo "merrickluo/liberime"
            :files ("CMakeLists.txt" "Makefile" "src" "liberime-config.el"))
   :init
   (add-hook 'after-liberime-load-hook
