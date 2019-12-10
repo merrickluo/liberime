@@ -11,6 +11,7 @@
 (setq rime-data-dir "/Library/Input Methods/Squirrel.app/Contents/SharedSupport")
 ;; linux
 (setq rime-data-dir "/usr/share/rime-data")
+(require 'liberime-config)
 
 (liberime-start rime-data-dir (expand-file-name "~/.emacs.d/test/rime"))
 (liberime-get-schema-list)

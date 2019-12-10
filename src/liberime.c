@@ -41,7 +41,6 @@ const char *liberime_##name##__doc = (docstring "\n\n(fn " args ")")
 typedef struct _EmacsRime {
   RimeSessionId session_id;
   RimeApi *api;
-  emacs_env *EmacsEnv;
   bool first_run;
 } EmacsRime;
 
@@ -59,14 +58,14 @@ void notification_handler(void *context,
                           RimeSessionId session_id,
                           const char *message_type,
                           const char *message_value) {
-  EmacsRime *rime = (EmacsRime*) context;
-  emacs_env *env = rime->EmacsEnv;
-  char format[] = "[liberime] %s: %s";
-  emacs_value args[3];
-  args[0] = env->make_string(env, format, strnlen(format, SCHEMA_MAXSTRLEN));
-  args[1] = env->make_string(env, message_type, strnlen(message_type, SCHEMA_MAXSTRLEN));
-  args[2] = env->make_string(env, message_value, strnlen(message_value, SCHEMA_MAXSTRLEN));
-  env->funcall(env, env->intern (env, "message"), 3, args);
+  /* EmacsRime *rime = (EmacsRime*) context; */
+  /* emacs_env *env = rime->EmacsEnv; */
+  /* char format[] = "[liberime] %s: %s"; */
+  /* emacs_value args[3]; */
+  /* args[0] = env->make_string(env, format, strnlen(format, SCHEMA_MAXSTRLEN)); */
+  /* args[1] = env->make_string(env, message_type, strnlen(message_type, SCHEMA_MAXSTRLEN)); */
+  /* args[2] = env->make_string(env, message_value, strnlen(message_value, SCHEMA_MAXSTRLEN)); */
+  /* env->funcall(env, env->intern (env, "message"), 3, args); */
 }
 
 // unused for now
@@ -133,8 +132,6 @@ static emacs_value start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], vo
   }
 
   rime->api->initialize(&emacs_rime_traits);
-  // Let notification_handler can access emacs_env
-  rime->EmacsEnv = env;
   rime->api->set_notification_handler(notification_handler, rime);
   rime->api->start_maintenance(true);
 
@@ -410,7 +407,7 @@ void liberime_init(emacs_env *env) {
     em_signal_rimeerr(env, 1, "No librime found");
     return;
   }
- 
+
   DEFUN("liberime-start", start, 2, 2);
   DEFUN("liberime-select-schema", select_schema, 1, 1);
   DEFUN("liberime-get-schema-list", get_schema_list, 0, 0);
