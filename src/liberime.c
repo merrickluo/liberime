@@ -41,8 +41,8 @@ const char *liberime_##name##__doc = (docstring "\n\n(fn " args ")")
 typedef struct _EmacsRime {
   RimeSessionId session_id;
   RimeApi *api;
-  bool firstRun;
   emacs_env *EmacsEnv;
+  bool first_run;
 } EmacsRime;
 
 typedef struct _CandidateLinkedList {
@@ -127,9 +127,9 @@ static emacs_value start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], vo
   emacs_rime_traits.distribution_name = "Rime";
   emacs_rime_traits.distribution_code_name = "emacs-rime";
   emacs_rime_traits.distribution_version = "0.1.0";
-  if (rime->firstRun) {
+  if (rime->first_run) {
     rime->api->setup(&emacs_rime_traits);
-    rime->firstRun = false;
+    rime->first_run = false;
   }
 
   rime->api->initialize(&emacs_rime_traits);
@@ -403,7 +403,7 @@ void liberime_init(emacs_env *env) {
   EmacsRime *rime = (EmacsRime*) malloc(sizeof(EmacsRime));
 
   rime->api = rime_get_api();
-  rime->firstRun = true; // not used yet
+  rime->first_run = true; // not used yet
 
   if (!rime->api) {
     free(rime);
