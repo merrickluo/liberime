@@ -56,7 +56,7 @@
     (load-file liberime--module-file))
   (unless (featurep 'liberime)
     (t (error "cannot load librime")))
-  (liberime--config)
+  (liberime--start)
   (run-hooks 'after-liberime-load-hook))
 
 (defun liberime--build ()
@@ -70,7 +70,7 @@
            (pop-to-buffer "*liberime build*")
            (error "liberime: building failed with exit code %d" (process-exit-status proc))))))))
 
-(defun liberime--config ()
+(defun liberime--start ()
   (unless (or (and liberime-shared-data-dir
                    (file-directory-p liberime-shared-data-dir))
               (and liberime-user-data-dir
@@ -90,7 +90,7 @@
   "redeploy liberime to affect config file change"
   (interactive)
   (liberime-finalize)
-  (liberime--config))
+  (liberime--start))
 
 (defun liberime-set-page-size (page-size)
   (liberime-set-config "default.custom" "patch/menu/page_size" 100 "int")
