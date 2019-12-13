@@ -69,7 +69,7 @@ void notification_handler(void *context,
   /* env->funcall(env, env->intern (env, "message"), 3, args); */
 }
 
-// unused for now
+// make sure session exists before operation
 static bool _ensure_session(EmacsRime *rime) {
   if (!rime->api->find_session(rime->session_id)) {
     rime->session_id = rime->api->create_session();
@@ -148,7 +148,6 @@ DOCSTRING(finalize, "", "finalize librime for redeploy");
 static emacs_value finalize(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
   if (rime->session_id) {
-    rime->api->sync_user_data();
     rime->session_id = 0;
   }
   rime->api->finalize();
