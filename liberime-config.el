@@ -28,6 +28,13 @@
   :group 'liberime
   :type 'hook)
 
+(defcustom liberime-after-start-hook nil
+  "List of functions to be called after liberime start"
+  :group 'liberime
+  :type 'hook)
+
+(make-obsolete-variable 'after-liberime-load-hook 'liberime-after-start-hook "2019-12-13")
+
 (defcustom liberime-shared-data-dir
   ;; only guess on linux
   (cl-case system-type
@@ -84,7 +91,8 @@
       (apply search (list pinyin limit))))
   (advice-add #'liberime-search :around #'limited-liberime-search)
 
-  (liberime-start liberime-shared-data-dir liberime-user-data-dir))
+  (liberime-start liberime-shared-data-dir liberime-user-data-dir)
+  (run-hooks 'liberime-after-start-hook))
 
 (defun liberime-deploy()
   "redeploy liberime to affect config file change"
