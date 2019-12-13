@@ -395,8 +395,9 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
   return result;
 }
 
-static emacs_value get_config(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
-  EmacsRime* rime = (EmacsRime*) data;
+DOCSTRING(get_config, "", "Get config");
+static emacs_value get_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime*) data;
 
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -408,8 +409,8 @@ static emacs_value get_config(emacs_env* env, ptrdiff_t nargs, emacs_value args[
     return em_nil;
   }
 
-  const char* config_id = em_get_string(env, args[0]);
-  const char* config_key = em_get_string(env, args[1]);
+  const char *config_id = em_get_string(env, args[0]);
+  const char *config_key = em_get_string(env, args[1]);
   char *config_type = "cstring";
   if (nargs == 3) {
     config_type = em_get_string(env, args[2]);
@@ -434,7 +435,7 @@ static emacs_value get_config(emacs_env* env, ptrdiff_t nargs, emacs_value args[
     success = rime->api->config_get_bool(config, config_key, &is_true);
     result = is_true ? em_t : em_nil;
   } else {
-    const char* string = rime->api->config_get_cstring(config, config_key);
+    const char *string = rime->api->config_get_cstring(config, config_key);
     success = true;
     result = env->make_string(env, string, strnlen(string, CONFIG_MAXSTRLEN));
   }
@@ -448,8 +449,9 @@ static emacs_value get_config(emacs_env* env, ptrdiff_t nargs, emacs_value args[
   return result;
 }
 
-static emacs_value set_config(emacs_env* env, ptrdiff_t nargs, emacs_value args[], void* data) {
-  EmacsRime* rime = (EmacsRime*) data;
+DOCSTRING(set_config, "", "Set config");
+static emacs_value set_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime*) data;
 
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -459,10 +461,10 @@ static emacs_value set_config(emacs_env* env, ptrdiff_t nargs, emacs_value args[
     em_signal_rimeerr(env, 2, "invalid arguments");
   }
 
-  const char* config_id = em_get_string(env, args[0]);
-  const char* config_key = em_get_string(env, args[1]);
+  const char *config_id = em_get_string(env, args[0]);
+  const char *config_key = em_get_string(env, args[1]);
   emacs_value value = args[2];
-  char* config_type = "string";
+  char *config_type = "string";
   if (nargs == 4) {
     config_type = em_get_string(env, args[3]);
   }
@@ -480,7 +482,7 @@ static emacs_value set_config(emacs_env* env, ptrdiff_t nargs, emacs_value args[
     bool is_true = env->is_not_nil(env, value);
     rime->api->config_set_bool(config, config_key, is_true);
   } else {
-    const char* string = em_get_string(env, value);
+    const char *string = em_get_string(env, value);
     rime->api->config_set_string(config, config_key, string);
   }
 
