@@ -95,14 +95,26 @@
   (run-hooks 'liberime-after-start-hook))
 
 (defun liberime-deploy()
-  "redeploy liberime to affect config file change"
+  "deploy liberime to affect config file change"
   (interactive)
   (liberime-finalize)
   (liberime--start))
 
 (defun liberime-set-page-size (page-size)
-  (liberime-set-config "default.custom" "patch/menu/page_size" 100 "int")
-  (liberime-redeploy))
+  "set rime page-size to `prefix' or by default 100
+example C-u 200 M-x liberime-set-page-size
+you also need to call liberime-deploy to make it take affect
+you only need to do this once.
+"
+  (interactive "P")
+  (liberime-set-config "default.custom" "patch/menu/page_size" (or page-size 100) "int"))
+
+(defun liberime-sync ()
+  "sync rime user data
+you should specify sync_dir in ~/.emacs.d/rime/installation.yaml
+"
+  (interactive)
+  (liberime-sync-user-data))
 
 ;;;###autoload
 (defun liberime-load ()
