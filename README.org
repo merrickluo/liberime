@@ -93,6 +93,9 @@ user_data_dir:
   (setq pyim-default-scheme 'rime))
 #+END_SRC
 
+** Deploy
+在手动修改了 librime 的配置后，可以手动调用 ~(liberime-deploy)~ 进行重新部署。
+
 ** Sync
 使用 liberime 会导致一个问题，就是在 Emacs 中输入中文时，词库跟系统输入法不一致，
 无论是你在使用 fcitx-rime, ibus-rime, 或者是 squirrel。不过 librime 提供了方法让
