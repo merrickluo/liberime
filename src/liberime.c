@@ -35,6 +35,7 @@ const char *liberime_##name##__doc = (docstring "\n\n(fn " args ")")
 
 #define CANDIDATE_MAXSTRLEN 1024
 #define SCHEMA_MAXSTRLEN 1024
+#define CONFIG_MAXSTRLEN 1024
 
 #define NO_SESSION_ERR "Cannot connect to librime session, make sure to run liberime-start first"
 
@@ -68,7 +69,7 @@ void notification_handler(void *context,
   /* env->funcall(env, env->intern (env, "message"), 3, args); */
 }
 
-// unused for now
+// make sure session exists before operation
 static bool _ensure_session(EmacsRime *rime) {
   if (!rime->api->find_session(rime->session_id)) {
     rime->session_id = rime->api->create_session();
@@ -147,7 +148,6 @@ DOCSTRING(finalize, "", "finalize librime for redeploy");
 static emacs_value finalize(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
   if (rime->session_id) {
-    rime->api->sync_user_data();
     rime->session_id = 0;
   }
   rime->api->finalize();
@@ -394,6 +394,101 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
   return result;
 }
 
+DOCSTRING(get_config, "", "Get config");
+static emacs_value get_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime*) data;
+
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    return em_nil;
+  }
+
+  if (nargs < 2) {
+    em_signal_rimeerr(env, 2, "invalid arguments");
+    return em_nil;
+  }
+
+  const char *config_id = em_get_string(env, args[0]);
+  const char *config_key = em_get_string(env, args[1]);
+  char *config_type = "cstring";
+  if (nargs == 3) {
+    config_type = em_get_string(env, args[2]);
+  }
+
+  RimeConfig *config = malloc(sizeof(RimeConfig));
+  rime->api->user_config_open(config_id, config);
+
+  bool success = false;
+  emacs_value result;
+  // printf("get %s for %s\n", config_key, config_type);
+  if (strcmp("int", config_type) == 0) {
+    int number = 0;
+    success = rime->api->config_get_int(config, config_key, &number);
+    result = env->make_integer(env, number);
+  } else if (strcmp("double", config_type) == 0) {
+    double number = 0.0;
+    success = rime->api->config_get_double(config, config_key, &number);
+    result = env->make_float(env, number);
+  } else if (strcmp("bool", config_type) == 0) {
+    Bool is_true = false;
+    success = rime->api->config_get_bool(config, config_key, &is_true);
+    result = is_true ? em_t : em_nil;
+  } else {
+    const char *string = rime->api->config_get_cstring(config, config_key);
+    success = true;
+    result = env->make_string(env, string, strnlen(string, CONFIG_MAXSTRLEN));
+  }
+
+  rime->api->config_close(config);
+  if (!success) {
+    em_signal_rimeerr(env, 2, "failed to get config");
+    return em_nil;
+  }
+
+  return result;
+}
+
+DOCSTRING(set_config, "", "Set config");
+static emacs_value set_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime*) data;
+
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+  }
+
+  if (nargs < 3) {
+    em_signal_rimeerr(env, 2, "invalid arguments");
+  }
+
+  const char *config_id = em_get_string(env, args[0]);
+  const char *config_key = em_get_string(env, args[1]);
+  emacs_value value = args[2];
+  char *config_type = "string";
+  if (nargs == 4) {
+    config_type = em_get_string(env, args[3]);
+  }
+
+  RimeConfig *config = malloc(sizeof(RimeConfig));
+  rime->api->user_config_open(config_id, config);
+
+  if (strcmp("int", config_type) == 0) {
+    int number = env->extract_integer(env, value);
+    rime->api->config_set_int(config, config_key, number);
+  } else if (strcmp("double", config_type) == 0) {
+    double number = env->extract_float(env, value);
+    rime->api->config_set_double(config, config_key, number);
+  } else if (strcmp("bool", config_type) == 0) {
+    bool is_true = env->is_not_nil(env, value);
+    rime->api->config_set_bool(config, config_key, is_true);
+  } else {
+    const char *string = em_get_string(env, value);
+    rime->api->config_set_string(config, config_key, string);
+  }
+
+  rime->api->config_close(config);
+  return em_t;
+}
+
 void liberime_init(emacs_env *env) {
   // Name 'rime' is hardcode in DEFUN micro, so if you edit here,
   // you should edit DEFUN micro too.
@@ -427,4 +522,6 @@ void liberime_init(emacs_env *env) {
   DEFUN("liberime-sync-user-data", sync_user_data, 0, 0);
   DEFUN("liberime-finalize", finalize, 0, 0);
 
+  DEFUN("liberime-get-config", get_config, 2, 3);
+  DEFUN("liberime-set-config", set_config, 3, 4);
 }

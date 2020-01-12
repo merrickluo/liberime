@@ -40,19 +40,18 @@ make test
 * Usage
 ** Initialize
 
+需要配合 [[https://github.com/tumashu/pyim][pyim]] 使用。
+
 shared_data_dir:
 librime 安装后提供的共享数据，里面会有预置的 schema 等 [[https://github.com/rime/home/wiki/SharedData][各平台所在位置详情]]。
 
 user_data_dir:
 推荐放在 "~/.emacs.d/rime",
 
-或者可以尝试使用外置输入法用的文件夹，比如Fcitx: "~/.config/fcitx/rime" 。（没测试过也许会有冲突）
+通过 use-package + quelpa 加载
+注意 add-hook 一定要放在:init block 里面
 
-
-通过 use-package + quelpa加载
-注意add-hook一定要放在:init block里面
-
-#+NAME use git fetcher
+使用 GitHub Repo
 #+BEGIN_SRC emacs-lisp
 (use-package liberime-config
   :quelpa (liberime-config
@@ -60,12 +59,12 @@ user_data_dir:
            :repo "merrickluo/liberime"
            :files ("CMakeLists.txt" "Makefile" "src" "liberime-config.el"))
   :init
-  (add-hook 'after-liberime-load-hook
+  (add-hook 'liberime-after-start-hook
             (lambda ()
               (liberime-select-schema "luna_pinyin_simp"))))
 #+END_SRC
 
-#+NAME: use local folder
+使用本地文件
 #+BEGIN_SRC emacs-lisp
 (use-package liberime-config
   :quelpa (liberime-config
@@ -78,6 +77,13 @@ user_data_dir:
               (liberime-select-schema "luna_pinyin_simp"))))
 #+END_SRC
 
+#+BEGIN_QUOTE
+注意，使用 hook 修改输入方案会有一些问题，由于 liberime 在执行 sync 等操作之后会
+重新部署，由于目前的技术限制，重新部署的通知在 elisp 环境无法收到，所以无法重新执
+行这些 hooks,如果需要设置指定的输入方案，建议直接在
+~/.emacs.d/rime/default.custom.yaml~ 配置。see [[https://gist.github.com/merrickluo/553f39c131d0eb717cd59f72c9d4b60d][example]]
+#+END_QUOTE
+
 #+NAME setup pyim
 #+BEGIN_SRC emacs-lisp
 (use-package pyim
@@ -87,7 +93,24 @@ user_data_dir:
   (setq pyim-default-scheme 'rime))
 #+END_SRC
 
-** Avaliable methods
+** Deploy
+在手动修改了 librime 的配置后，可以手动调用 ~(liberime-deploy)~ 进行重新部署。
+
+** Sync
+使用 liberime 会导致一个问题，就是在 Emacs 中输入中文时，词库跟系统输入法不一致，
+无论是你在使用 fcitx-rime, ibus-rime, 或者是 squirrel。不过 librime 提供了方法让
+我们保持词库同步。参考：[[https://github.com/rime/home/wiki/UserGuide#%E5%90%8C%E6%AD%A5%E7%94%A8%E6%88%B6%E8%B3%87%E6%96%99][Rime 同步用户资料]]。
+
+默认情况下 liberime 的 installation.yaml 在
+$HOME/.emacs.d/rime/installation.yaml，用户只需要在里面添加 sync_dir ，就可以使用
+liberime-config 提供的 ~(liberime-sync)~ 方法进行同步了。还可以将其加入到
+emacs 的 ~after-init-hook~ 中自动进行同步。
+
+#+begin_src emacs-lisp
+(add-hook 'after-init-hook #'liberime-sync)
+#+end_src
+
+** Available methods
 
 *** (liberime-start shared_data_dir user_data_dir)
 initialize deploy and started a session with librime

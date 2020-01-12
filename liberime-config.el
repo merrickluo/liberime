@@ -28,6 +28,13 @@
   :group 'liberime
   :type 'hook)
 
+(defcustom liberime-after-start-hook nil
+  "List of functions to be called after liberime start"
+  :group 'liberime
+  :type 'hook)
+
+(make-obsolete-variable 'after-liberime-load-hook 'liberime-after-start-hook "2019-12-13")
+
 (defcustom liberime-shared-data-dir
   ;; only guess on linux
   (cl-case system-type
@@ -56,7 +63,7 @@
     (load-file liberime--module-file))
   (unless (featurep 'liberime)
     (t (error "cannot load librime")))
-  (liberime--config)
+  (liberime--start)
   (run-hooks 'after-liberime-load-hook))
 
 (defun liberime--build ()
@@ -70,7 +77,7 @@
            (pop-to-buffer "*liberime build*")
            (error "liberime: building failed with exit code %d" (process-exit-status proc))))))))
 
-(defun liberime--config ()
+(defun liberime--start ()
   (unless (or (and liberime-shared-data-dir
                    (file-directory-p liberime-shared-data-dir))
               (and liberime-user-data-dir
@@ -84,13 +91,30 @@
       (apply search (list pinyin limit))))
   (advice-add #'liberime-search :around #'limited-liberime-search)
 
-  (liberime-start liberime-shared-data-dir liberime-user-data-dir))
+  (liberime-start liberime-shared-data-dir liberime-user-data-dir)
+  (run-hooks 'liberime-after-start-hook))
 
-(defun liberime-redeploy()
-  "redeploy liberime to affect config file change"
+(defun liberime-deploy()
+  "deploy liberime to affect config file change"
   (interactive)
   (liberime-finalize)
-  (liberime--config))
+  (liberime--start))
+
+(defun liberime-set-page-size (page-size)
+  "set rime page-size to `prefix' or by default 100
+example C-u 200 M-x liberime-set-page-size
+you also need to call liberime-deploy to make it take affect
+you only need to do this once.
+"
+  (interactive "P")
+  (liberime-set-config "default.custom" "patch/menu/page_size" (or page-size 100) "int"))
+
+(defun liberime-sync ()
+  "sync rime user data
+you should specify sync_dir in ~/.emacs.d/rime/installation.yaml
+"
+  (interactive)
+  (liberime-sync-user-data))
 
 ;;;###autoload
 (defun liberime-load ()
