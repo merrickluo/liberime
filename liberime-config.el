@@ -107,7 +107,7 @@ you also need to call liberime-deploy to make it take affect
 you only need to do this once.
 "
   (interactive "P")
-  (liberime-set-config "default.custom" "patch/menu/page_size" (or page-size 100) "int"))
+  (liberime-set-user-config "default.custom" "patch/menu/page_size" (or page-size 100) "int"))
 
 (defun liberime-sync ()
   "sync rime user data
