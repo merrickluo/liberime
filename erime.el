@@ -84,7 +84,7 @@
                          ("<return>" . 65293)
                          ,@(mapcar (lambda (x)
                                      `(,(char-to-string x) . ,x))
-                                   (number-sequence ?1 ?9))))
+                                   (number-sequence ?0 ?9))))
 
 (defvar erime-composition-keys '(("C-d" . 65535)
                                 ("<deletechar>" . 65535)
@@ -225,15 +225,15 @@
          keysym-num)
     ;; key processing based on key type
     (cond
-      ;; 1. alphabet
+      ;; 1. alphabet or \, \ start a symbol (recognizer/patterns/punct: '^\[A-Za-z]+$')
       ((and (= (length keyseq-name) 1)
-            (string-match "[[:alpha:]]" keyseq-name)
+            (string-match "[[:alpha:]]\\|/" keyseq-name)
             (not (erime-english-mode-p)))
        (liberime-process-key key)
        (with-current-buffer erime-input-buffer
          (insert key))
        (setq erime-last-punctuation nil))
-      ;; 2. same punctuation press twice to go to the next candidate
+      ;; 2. punctuation: same punctuation press twice to go to the next candidate
       ((and (= (length keyseq-name) 1)
             (erime-fullwidth-mode-p)
             (string-match "[[:punct:]]" keyseq-name))
@@ -248,18 +248,16 @@
            (liberime-select-candidate 0))
        (setq erime-translating nil)
        (setq erime-last-punctuation key))
-      ;; 3. menu key
+      ;; 4. menu key
       ((and (setq keysym-num
                   (cdr (assoc keyseq-name erime-menu-keys))))
-       ;; numeric and space char
-       (if (and (or (= (length keyseq-name) 1)
-                    (string-equal "SPC" keyseq-name))
-                (erime-input-empty-p))
-           (setq result (char-to-string key))
+       (if (erime-input-empty-p)
+           (setq result keyseq)
            (liberime-process-key keysym-num)))
       ;; 4. composition key
       ((and (setq keysym-num
-                  (cdr (assoc keyseq-name erime-composition-keys))))
+                  (cdr (assoc keyseq-name erime-composition-keys)))
+            (not (erime-input-empty-p)))
        (liberime-process-key keysym-num)
        (with-current-buffer erime-input-buffer
          (let* ((overriding-terminal-local-map erime-aux-map)
@@ -364,7 +362,7 @@
 (defun erime-add-to-custom-phrase ())
 
 ;;;###autoload
-(defvar erime-title "erime" "The name displayed in mode-line of erime.")
+(defvar erime-title "ㄓ" "The name displayed in mode-line of erime.")
 
 ;;;###autoload
 (register-input-method "erime" "euc-cn" 'erime-activate erime-title)
