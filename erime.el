@@ -24,9 +24,7 @@
 ;;             (lambda ()
 ;;               (liberime-select-schema "guhuwubi")))
 ;;   :config
-;;   (setq erime-title "ㄓ"
-;;         default-input-method "erime")
-;;   )
+;;   (setq default-input-method "erime"))
 
 ;;
 ;;; Code:
@@ -38,10 +36,10 @@
   "Rime is a frontend to liberime"
   :group 'leim)
 
-(defcustom erime-probe-list
+(defcustom rime-disable-predicates
   '(evil-normal-state-p
-    erime-probe-program-mode
-    erime-probe-english-context)
+    erime-program-mode-p
+    erime-english-context-p)
   "临时英文模式探针"
   :group 'erime
   :type 'list)
@@ -58,6 +56,8 @@
 
 (defvar erime-tooltip-posframe-buffer " *erime prompt*")
 
+(defvar erime-delimiter "'")
+
 (defvar erime-local-variable-list
   '(input-method-function
     deactivate-current-input-method-function
@@ -69,40 +69,40 @@
   (put var 'permanent-local t))
 
 (defvar erime-menu-keys `(;; Next PageDown
-                         ("M-n" . 65366)
-                         ;; Prior PageUp
-                         ("M-p" . 65365)
-                         ;; C-n Down
-                         ("C-n" . 65364)
-                         ;; Up
-                         ("C-p" . 65362)
-                         ;; Space
-                         ("SPC" . 32)
-                         ("RET" . 65293)
-                         ("C-m" . 65293)
-                         ;; exwm-mode buffer
-                         ("<return>" . 65293)
-                         ,@(mapcar (lambda (x)
-                                     `(,(char-to-string x) . ,x))
-                                   (number-sequence ?0 ?9))))
+                          ("M-n" . 65366)
+                          ;; Prior PageUp
+                          ("M-p" . 65365)
+                          ;; C-n Down
+                          ("C-n" . 65364)
+                          ;; Up
+                          ("C-p" . 65362)
+                          ;; Space
+                          ("SPC" . 32)
+                          ("RET" . 65293)
+                          ("C-m" . 65293)
+                          ;; exwm-mode buffer
+                          ("<return>" . 65293)
+                          ,@(mapcar (lambda (x)
+                                      `(,(char-to-string x) . ,x))
+                                    (number-sequence ?0 ?9))))
 
 (defvar erime-composition-keys '(("C-d" . 65535)
-                                ("<deletechar>" . 65535)
-                                ;; Shift+Delete
-                                ("C-k" . (65505 65535))
-                                ("C-h" . 65288)
-                                ;; BackSpace
-                                ("DEL" . 65288)
-                                ("<backspace>" . 65288)
-                                ("<delete>" . 65288)
-                                ;; Left
-                                ("C-b" . 65361)
-                                ;; Right
-                                ("C-f" . 65363)
-                                ;; Home
-                                ("C-a" . 65360)
-                                ;; End
-                                ("C-e" . 65367)))
+                                 ("<deletechar>" . 65535)
+                                 ;; Shift+Delete
+                                 ("C-k" . (65505 65535))
+                                 ("C-h" . 65288)
+                                 ;; BackSpace
+                                 ("DEL" . 65288)
+                                 ("<backspace>" . 65288)
+                                 ("<delete>" . 65288)
+                                 ;; Left
+                                 ("C-b" . 65361)
+                                 ;; Right
+                                 ("C-f" . 65363)
+                                 ;; Home
+                                 ("C-a" . 65360)
+                                 ;; End
+                                 ("C-e" . 65367)))
 
 (defvar erime-aux-map
   (let ((map (make-sparse-keymap)))
@@ -120,17 +120,13 @@
       (define-key map (kbd (car i)) 'erime-translate-key))
     map))
 
-(defun erime-probe-program-mode ()
-  "中文输入限制在字符串和 comment 中"
-  (interactive)
-  (when (derived-mode-p 'prog-mode)
-    (let* ((ppss (syntax-ppss (point))))
-      (not
-       (or (car (setq ppss (nthcdr 3 ppss)))
-           (car (setq ppss (cdr ppss)))
-           (nth 3 ppss))))))
+(defun erime-program-mode-p ()
+  "当前为`prog-mode'或`conf-mode'，且光标在注释或字符串当中。"
+  (when (derived-mode-p 'prog-mode 'conf-mode)
+    (not (or (nth 3 (syntax-ppss))
+             (nth 4 (syntax-ppss))))))
 
-(defun erime-probe-english-context ()
+(defun erime-english-context-p ()
   (or
    ;; 中文后面紧接1个空格切换到英文输入
    ;; \cC represents any character of category “C”, according to “M-x describe-categories”
@@ -140,14 +136,13 @@
 
 (defun erime-english-mode-p ()
   (unless (string-match " *temp*" (buffer-name))
-    (cl-some #'(lambda (x)
-                 (if (functionp x) (funcall x) nil))
-             erime-probe-list)))
+    (seq-find 'funcall rime-disable-predicates nil)))
 
 ;; todo: type v to toggle the previously inserted punctuation
 (defun erime-fullwidth-mode-p ()
+  ;; for org list
   (not
-   (looking-back "[0-9]\\| " (max (line-beginning-position) (1- (point))))))
+   (looking-back "^\\s-*[0-9]+" (line-beginning-position))))
 
 (defun erime-activate (name)
   (interactive)
@@ -191,8 +186,6 @@
                       (get-buffer-create " *rime-input*"))
                     (erime-translating t)
                     result)
-               (with-current-buffer erime-input-buffer
-                 (erase-buffer))
                (liberime-clear-composition)
                ;; Push back the last event on the event queue.
                (and key (push key unread-command-events))
@@ -204,19 +197,67 @@
 
 (defun erime-start-translation ()
   (while erime-translating
-    (let ((keyseq (read-key-sequence-vector nil nil nil t)))
-      (erime-translate-key keyseq))
-    ;; continuation check
-    ;; liberime-get-commit returns the result only after all being translated
-    (if (or result
-            (setq result (liberime-get-commit)))
-        (progn
-          (setq erime-translating nil))
-        (let ((context (liberime-get-context)))
-          ;; update prompt and continue
-          (erime-prompt--refresh))))
-  (when (get-buffer erime-tooltip-posframe-buffer)
-    (posframe-hide erime-tooltip-posframe-buffer))
+    (let ((keyseq (read-key-sequence-vector nil nil nil t))
+          context
+          composition 
+          preedit
+          prompt-str)
+      (erime-translate-key keyseq)
+      ;; continuation check
+      (when (or result
+                (setq result (liberime-get-commit)))
+        (setq erime-translating nil))
+      ;; update inpout buffer to match preedit
+      (if (setq context (liberime-get-context))
+          (progn
+            (setq composition (alist-get 'composition context))
+            (setq preedit (alist-get 'preedit composition))
+            (let* ((composition-length (alist-get 'length composition))
+                   (cursor-pos (alist-get 'cursor-pos composition))
+                   (menu (alist-get 'menu context))
+                   (highlighted-candidate-index (alist-get 'highlighted-candidate-index menu))
+                   (last-page-p (alist-get 'last-page-p menu))
+                   (num-candidates (alist-get 'num-candidates menu))
+                   (page-no (alist-get 'page-no menu))
+                   (candidates (alist-get 'candidates menu))
+                   (cursor-distance-to-end (- composition-length cursor-pos)))
+              (with-current-buffer erime-input-buffer
+                (erase-buffer)
+                (insert preedit)
+                (backward-char cursor-distance-to-end))
+              (setq prompt-str
+                    (concat ":"
+                            ;; candidates
+                            (let (result)
+                              (dolist (i (number-sequence 0 (1- num-candidates)))
+                                ;; 高亮当前选择的词条
+                                (push (if (= i highlighted-candidate-index)
+                                          (format "[%d.%s]" (1+ i) (nth i candidates))
+                                          (format "%d.%s" (1+ i) (nth i candidates)))
+                                      result))
+                              (concat
+                               (mapconcat #'identity (reverse result) " ")
+                               ;; current page number
+                               (if last-page-p
+                                   (format "(%s<)" (1+ page-no))
+                                   (format "(%s)" (1+ page-no)))))))))
+          (setq prompt-str nil
+                preedit nil))
+      (setq prompt-str (concat
+                        (with-current-buffer erime-input-buffer
+                          (concat (buffer-substring-no-properties 1 (point)) "|"
+                                  (buffer-substring-no-properties (point) (point-max))))
+                        prompt-str))
+      ;; refresh prompt
+      (if erime-translating
+          (erime-prompt--refresh)
+          (if (get-buffer erime-tooltip-posframe-buffer)
+              (posframe-hide erime-tooltip-posframe-buffer)
+              (message nil)) 
+          (with-current-buffer erime-input-buffer
+            (erase-buffer))
+          (when preedit
+            (push (string-to-char preedit) unread-command-events)))))
   result)
 
 (defun erime-translate-key (keyseq)
@@ -226,17 +267,18 @@
     ;; key processing based on key type
     (cond
       ;; 1. alphabet or \, \ start a symbol (recognizer/patterns/punct: '^\[A-Za-z]+$')
-      ((and (= (length keyseq-name) 1)
-            (string-match "[[:alpha:]]\\|/" keyseq-name)
+      ((and (string-match "^[[:alpha:]/]$" keyseq-name)
             (not (erime-english-mode-p)))
        (liberime-process-key key)
        (with-current-buffer erime-input-buffer
          (insert key))
        (setq erime-last-punctuation nil))
       ;; 2. punctuation: same punctuation press twice to go to the next candidate
-      ((and (= (length keyseq-name) 1)
-            (erime-fullwidth-mode-p)
-            (string-match "[[:punct:]]" keyseq-name))
+      ((and (string-match (concat "^" erime-delimiter "$") keyseq-name)
+            (not (erime-input-empty-p)))
+       (liberime-process-key key))
+      ((and (erime-fullwidth-mode-p)
+            (string-match "^[[:punct:]]$" keyseq-name))
        (liberime-process-key key)
        (if (eq erime-last-punctuation key)
            (progn
@@ -270,64 +312,27 @@
                  (undefined))))))
       (t (setq result (this-command-keys))))))
 
-(defun erime-prompt--format-prompt ()
-  (if (not context)
-      (with-current-buffer erime-input-buffer
-        (concat (buffer-substring-no-properties 1 (point)) "|"
-                (buffer-substring-no-properties (point) (point-max))))
-      (let* ((composition (alist-get 'composition context))
-             (composition-length (alist-get 'length composition))
-             (cursor-pos (alist-get 'cursor-pos composition))
-             (preedit (alist-get 'preedit composition))
-             (menu (alist-get 'menu context))
-             (highlighted-candidate-index (alist-get 'highlighted-candidate-index menu))
-             (last-page-p (alist-get 'last-page-p menu))
-             (num-candidates (alist-get 'num-candidates menu))
-             (page-no (alist-get 'page-no menu))
-             (candidates (alist-get 'candidates menu))
-             (cursor-distance-to-end (- composition-length cursor-pos)))
-        (with-current-buffer erime-input-buffer
-          (erase-buffer)
-          (insert preedit)
-          (backward-char cursor-distance-to-end))
-        (concat
-         (with-current-buffer erime-input-buffer
-           (concat (buffer-substring-no-properties 1 (point)) "|"
-                   (buffer-substring-no-properties (point) (point-max))))
-         ":"
-         ;; candidates
-         (let (result)
-           (dolist (i (number-sequence 0 (1- num-candidates)))
-             ;; 高亮当前选择的词条
-             (push (if (= i highlighted-candidate-index)
-                       (format "[%d.%s]" (1+ i) (nth i candidates))
-                       (format "%d.%s" (1+ i) (nth i candidates)))
-                   result))
-           (concat
-            (mapconcat #'identity (reverse result) " ")
-            ;; current page number
-            (if last-page-p
-                (format "(%s<)" (1+ page-no))
-                (format "(%s)" (1+ page-no)))))))))
-
 (defun erime-prompt--refresh ()
-  (when (and (null unread-command-events)
-             (null unread-post-input-method-events))
-    (let ((prompt-str (erime-prompt--format-prompt)))
-      (if (eq (selected-window)
-              (minibuffer-window))
-          ;; minibuffer 使用下一行显示候选词
-          (erime-prompt--minibuffer-message (concat "\n" prompt-str))
-          ;; 普通 buffer
-          (if (and (eq erime-prompt-tooltip 'posframe)
-                   (not (string-match " *temp*" (buffer-name)))
-                   (posframe-valid-p))
-              (posframe-show erime-tooltip-posframe-buffer
-                             :string prompt-str
-                             :position (point)
-                          :background-color (face-attribute 'erime-prompt :background)
-                          :foreground-color (face-attribute 'erime-prompt :foreground))
-              (message (propertize prompt-str 'face 'erime-prompt)))))))
+  (if (eq (selected-window)
+          (minibuffer-window))
+      ;; minibuffer 使用下一行显示候选词
+      (erime-prompt--minibuffer-message (concat "\n" prompt-str))
+      ;; 普通 buffer
+      (if (and (eq erime-prompt-tooltip 'posframe)
+               (not (string-match " *temp*" (buffer-name)))
+               (posframe-valid-p))
+          (progn
+            (posframe-show erime-tooltip-posframe-buffer
+                           :string prompt-str
+                           :position (point)
+                           :background-color (face-attribute 'erime-prompt :background)
+                           :foreground-color (face-attribute 'erime-prompt :foreground))
+            (dolist (frame (frame-list))
+              (let ((buffer-info (frame-parameter frame 'posframe-buffer)))
+                (when (or (equal erime-tooltip-posframe-buffer (car buffer-info))
+                          (equal erime-tooltip-posframe-buffer (cdr buffer-info)))
+                  (set-frame-parameter frame 'parent-frame nil)))))
+          (message (propertize prompt-str 'face 'erime-prompt)))))
 
 (defun erime-prompt--minibuffer-message (string)
   "minibuffer 中需要将原来显示的信息和选词框整合在一起显示"
