@@ -30,7 +30,9 @@ const char *liberime_##name##__doc = (docstring "\n\n(fn " args ")")
   em_cons(env, env->intern(env, key), env->make_integer(env, integer));
 #define CONS_STRING(key, str)                                           \
   em_cons(env, env->intern(env, key), env->make_string(env, str, strlen(str)))
-#define CONS_VALUE(key, value) \
+#define CONS_NIL(key) \
+  em_cons(env, env->intern(env, key), em_nil)
+#define CONS_VALUE(key, value)                  \
   em_cons(env, env->intern(env, key), value)
 
 #define CANDIDATE_MAXSTRLEN 1024
@@ -81,12 +83,16 @@ static bool _ensure_session(EmacsRime *rime) {
   return true;
 }
 
-static char *_copy_string(char *string) {
-  size_t size = strnlen(string, CANDIDATE_MAXSTRLEN);
-  char *new_str = malloc(size+1);
-  strncpy(new_str, string, size);
-  new_str[size] = '\0';
-  return new_str;
+static char *_copy_string(char *str) {
+  if (str) {
+     size_t size = strnlen(str, CANDIDATE_MAXSTRLEN);
+     char *new_str = malloc(size+1);
+     strncpy(new_str, str, size);
+     new_str[size] = '\0';
+     return new_str;
+  } else {
+    return NULL;
+  }
 }
 
 EmacsRimeCandidates _get_candidates(EmacsRime *rime, size_t limit) {
@@ -410,7 +416,10 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
 
   // 0. context.commit_text_preview
   char *ctp_str = _copy_string(context.commit_text_preview);
-  result_a[0] = CONS_STRING("commit-text-preview", ctp_str);
+  if (ctp_str)
+    result_a[0] = CONS_STRING("commit-text-preview", ctp_str);
+  else
+    result_a[0] = CONS_NIL("commit-text-preview");
 
   // 2. context.composition
   emacs_value composition_a[5];
@@ -420,7 +429,10 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
   composition_a[3] = CONS_INT("sel-end", context.composition.sel_end);
 
   char *preedit_str = _copy_string(context.composition.preedit);
-  composition_a[4] = CONS_STRING("preedit", preedit_str);
+  if (preedit_str)
+    composition_a[4] = CONS_STRING("preedit", preedit_str);
+  else
+    composition_a[4] = CONS_NIL("preedit");
 
   emacs_value composition_value = em_list(env, 5, composition_a);
   result_a[1] = CONS_VALUE("composition", composition_value);
