@@ -18,8 +18,10 @@
 (liberime-select-schema "luna_pinyin_simp")
 (liberime-search "wode" nil)
 (liberime-finalize)
-(liberime-get-config "default.custom" "patch/menu/page_size" "int")
-(liberime-set-config "default.custom" "patch/menu/page_size" 100 "int")
+(liberime-get-user-config "default.custom" "patch/menu/page_size" "int")
+(liberime-set-user-config "default.custom" "patch/menu/page_size" 100 "int")
+(liberime-get-schema-config nil "speller/auto_select" "bool")
+(liberime-set-schema-config nil "speller/auto_select" true "bool")
 (liberime-sync-user-data)
 
 (require 'pyim)

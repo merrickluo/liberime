@@ -464,8 +464,8 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
   return result;
 }
 
-DOCSTRING(get_config, "", "Get config");
-static emacs_value get_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+DOCSTRING(get_user_config, "", "Get user config");
+static emacs_value get_user_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
 
   if (!_ensure_session(rime)) {
@@ -486,7 +486,11 @@ static emacs_value get_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[
   }
 
   RimeConfig *config = malloc(sizeof(RimeConfig));
-  rime->api->user_config_open(config_id, config);
+  // 注意user_config_open是从user_data_dir下获取
+  if (!rime->api->user_config_open(config_id, config)) {
+        em_signal_rimeerr(env, 2, "failed to open user config file");
+      return em_nil;
+  }
 
   bool success = false;
   emacs_value result;
@@ -518,8 +522,8 @@ static emacs_value get_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[
   return result;
 }
 
-DOCSTRING(set_config, "", "Set config");
-static emacs_value set_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+DOCSTRING(set_user_config, "", "Set user config");
+static emacs_value set_user_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
 
   if (!_ensure_session(rime)) {
@@ -539,8 +543,164 @@ static emacs_value set_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[
   }
 
   RimeConfig *config = malloc(sizeof(RimeConfig));
-  rime->api->user_config_open(config_id, config);
+  if (!rime->api->user_config_open(config_id, config)) {
+    em_signal_rimeerr(env, 2, "failed to open user config file");
+    return em_nil;
+  }
 
+  if (strcmp("int", config_type) == 0) {
+    int number = env->extract_integer(env, value);
+    rime->api->config_set_int(config, config_key, number);
+  } else if (strcmp("double", config_type) == 0) {
+    double number = env->extract_float(env, value);
+    rime->api->config_set_double(config, config_key, number);
+  } else if (strcmp("bool", config_type) == 0) {
+    bool is_true = env->is_not_nil(env, value);
+    rime->api->config_set_bool(config, config_key, is_true);
+  } else {
+    const char *string = em_get_string(env, value);
+    rime->api->config_set_string(config, config_key, string);
+  }
+
+  rime->api->config_close(config);
+  return em_t;
+}
+
+
+DOCSTRING(get_schema_config, "", "Get schema config");
+static emacs_value get_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime*) data;
+
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    return em_nil;
+  }
+
+  if (nargs < 2) {
+    em_signal_rimeerr(env, 2, "invalid arguments");
+    return em_nil;
+  }
+
+  const char *arg0  = em_get_string(env, args[0]);
+  const int max_schema_length = 0xff;
+  char *schema_id = (char *)malloc(max_schema_length * sizeof(char));
+  memset(schema_id, 0, max_schema_length);
+    if (arg0 == NULL || strlen(arg0) == 0) {
+        if (!rime->api->get_current_schema(rime->session_id, schema_id, max_schema_length)) {
+        em_signal_rimeerr(env, 2, "error get current schema");
+        return em_nil;
+    }
+  } else {
+    if (strlen(arg0) > max_schema_length) {
+      em_signal_rimeerr(env, 2, "schema id too long");
+      return em_nil;
+    }
+
+    strcpy(schema_id, arg0);
+  }
+
+  if (strlen(schema_id) == 0) {
+    free(schema_id);
+    em_signal_rimeerr(env, 2, "error length of schema id");
+    return em_nil;
+  }
+
+  const char *config_key = em_get_string(env, args[1]);
+  char *config_type = "cstring";
+  if (nargs == 3) {
+    config_type = em_get_string(env, args[2]);
+  }
+
+  RimeConfig *config = malloc(sizeof(RimeConfig));
+  if (!rime->api->schema_open(schema_id, config)) {
+      free(schema_id);
+      em_signal_rimeerr(env, 2, "failed to open schema config file");
+      return em_nil;
+  }
+  
+  free(schema_id);
+
+  bool success = false;
+  emacs_value result;
+  // printf("get %s for %s\n", schema_id, config_type);
+  if (strcmp("int", config_type) == 0) {
+    int number = 0;
+    success = rime->api->config_get_int(config, config_key, &number);
+    result = env->make_integer(env, number);
+  } else if (strcmp("double", config_type) == 0) {
+    double number = 0.0;
+    success = rime->api->config_get_double(config, config_key, &number);
+    result = env->make_float(env, number);
+  } else if (strcmp("bool", config_type) == 0) {
+    Bool is_true = false;
+    success = rime->api->config_get_bool(config, config_key, &is_true);
+    result = is_true ? em_t : em_nil;
+  } else {
+    const char *string = rime->api->config_get_cstring(config, config_key);
+    success = true;
+    result = env->make_string(env, string, strnlen(string, CONFIG_MAXSTRLEN));
+  }
+
+  rime->api->config_close(config);
+  if (!success) {
+    em_signal_rimeerr(env, 2, "failed to get config");
+    return em_nil;
+  }
+
+  return result;
+}
+
+DOCSTRING(set_schema_config, "", "Set schema config");
+static emacs_value set_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime*) data;
+
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+  }
+
+  if (nargs < 3) {
+    em_signal_rimeerr(env, 2, "invalid arguments");
+  }
+
+  const char *arg0  = em_get_string(env, args[0]);
+  const int max_schema_length = 0xff;
+  char *schema_id = (char *)malloc(max_schema_length * sizeof(char));
+  memset(schema_id, 0, max_schema_length);
+    if (arg0 == NULL || strlen(arg0) == 0) {
+        if (!rime->api->get_current_schema(rime->session_id, schema_id, max_schema_length)) {
+        em_signal_rimeerr(env, 2, "error get current schema");
+        return em_nil;
+    }
+  } else {
+    if (strlen(arg0) > max_schema_length) {
+      em_signal_rimeerr(env, 2, "schema id too long");
+      return em_nil;
+    }
+
+    strcpy(schema_id, arg0);
+  }
+
+  if (strlen(schema_id) == 0) {
+    free(schema_id);
+    em_signal_rimeerr(env, 2, "error length of schema id");
+    return em_nil;
+  }
+
+  const char *config_key = em_get_string(env, args[1]);
+  emacs_value value = args[2];
+  char *config_type = "string";
+  if (nargs == 4) {
+    config_type = em_get_string(env, args[3]);
+  }
+
+  RimeConfig *config = (RimeConfig *)malloc(sizeof(RimeConfig));
+  if (!rime->api->schema_open(schema_id, config)) {
+      free(schema_id);
+      em_signal_rimeerr(env, 2, "failed to open schema config file");
+      return em_nil;
+  }
+
+  free(schema_id);
   if (strcmp("int", config_type) == 0) {
     int number = env->extract_integer(env, value);
     rime->api->config_set_int(config, config_key, number);
@@ -593,6 +753,12 @@ void liberime_init(emacs_env *env) {
   DEFUN("liberime-sync-user-data", sync_user_data, 0, 0);
   DEFUN("liberime-finalize", finalize, 0, 0);
 
-  DEFUN("liberime-get-config", get_config, 2, 3);
-  DEFUN("liberime-set-config", set_config, 3, 4);
+  // user config
+  DEFUN("liberime-get-user-config", get_user_config, 2, 3);
+  DEFUN("liberime-set-user-config", set_user_config, 3, 4);
+
+  // schema config
+  // if schema id is nil/empty then get/set current schema config
+  DEFUN("liberime-get-schema-config", get_schema_config, 2, 3);
+  DEFUN("liberime-set-schema-config", set_schema_config, 3, 4);
 }
