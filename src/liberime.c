@@ -168,6 +168,64 @@ void free_candidate_list(CandidateLinkedList *list) {
   }
 }
 
+DOCSTRING(search, "STRING LIMIT",
+          "Input STRING and return LIMIT number candidates.\n"
+          "When LIMIT is nil, return all candidates.");
+static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime*) data;
+  char* string = em_get_string(env, args[0]);
+
+  size_t limit = 0;
+  if (nargs == 2) {
+    if (!env->is_not_nil(env, args[1])) {
+      limit = 0;
+    } else {
+      limit = env->extract_integer(env, args[1]);
+      // if limit set to 0 return nil immediately
+      if (limit == 0) {
+        return em_nil;
+      }
+    }
+  }
+
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    return em_nil;
+  }
+
+  rime->api->clear_composition(rime->session_id);
+  rime->api->simulate_key_sequence(rime->session_id, string);
+
+  EmacsRimeCandidates candidates = _get_candidates(rime, limit);
+
+  // printf("%s: find candidates size: %ld\n", string, candidates.size);
+  // return nil if no candidates found
+  if (candidates.size == 0) {
+    return em_nil;
+  }
+
+  emacs_value* array = malloc(sizeof(emacs_value) * candidates.size);
+
+  CandidateLinkedList *next = candidates.list;
+  int i = 0;
+  while (next && i < candidates.size) {
+    const char *value = next->value;
+    array[i++] = env->make_string(env, value, strlen(value));
+    next = next->next;
+  }
+  // printf("conveted array size: %d\n", i);
+
+  emacs_value flist = env->intern(env, "list");
+  emacs_value result = env->funcall(env, flist, candidates.size, array);
+
+  // free(candidates.candidates);
+  free_candidate_list(candidates.list);
+  free(array);
+  free(string);
+
+  return result;
+}
+
 DOCSTRING(get_sync_dir, "", "get sync dir");
 static emacs_value get_sync_dir(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
@@ -504,6 +562,7 @@ void liberime_init(emacs_env *env) {
   }
 
   DEFUN("liberime-start", start, 2, 2);
+  DEFUN("liberime-search", search, 1, 2);
   DEFUN("liberime-select-schema", select_schema, 1, 1);
   DEFUN("liberime-get-schema-list", get_schema_list, 0, 0);
 
