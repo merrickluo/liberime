@@ -349,10 +349,6 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
     return em_nil;
   }
 
-  if (!context.menu.num_candidates) {
-    return em_nil;
-  }
-
   size_t result_size = 3;
   emacs_value result_a[result_size];
 
@@ -374,29 +370,36 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
   if (preedit_str)
     composition_a[4] = CONS_STRING("preedit", preedit_str);
   else
-    composition_a[4] = CONS_NIL("preedit");
+    // When we don't have a preedit,
+    // The composition should be nil.
+    return em_nil;
+    /* composition_a[4] = CONS_NIL("preedit"); */
 
   emacs_value composition_value = em_list(env, 5, composition_a);
   result_a[1] = CONS_VALUE("composition", composition_value);
 
   // 3. context.menu
-  emacs_value menu_a[6];
-  menu_a[0] = CONS_INT("highlighted-candidate-index", context.menu.highlighted_candidate_index);
-  menu_a[1] = CONS_VALUE("last-page-p", context.menu.is_last_page ? em_t : em_nil);
-  menu_a[2] = CONS_INT("num-candidates", context.menu.num_candidates);
-  menu_a[3] = CONS_INT("page-no", context.menu.page_no);
-  menu_a[4] = CONS_INT("page-size", context.menu.page_size);
-
-  emacs_value carray[context.menu.num_candidates];
-  for (int i = 0; i < context.menu.num_candidates; i++) {
-    RimeCandidate c = context.menu.candidates[i];
-    char *ctext = _copy_string(c.text);
-    carray[i] = env->make_string(env, ctext, strlen(ctext));
+  if (context.menu.num_candidates) {
+    emacs_value menu_a[6];
+    menu_a[0] = CONS_INT("highlighted-candidate-index", context.menu.highlighted_candidate_index);
+    menu_a[1] = CONS_VALUE("last-page-p", context.menu.is_last_page ? em_t : em_nil);
+    menu_a[2] = CONS_INT("num-candidates", context.menu.num_candidates);
+    menu_a[3] = CONS_INT("page-no", context.menu.page_no);
+    menu_a[4] = CONS_INT("page-size", context.menu.page_size);
+    emacs_value carray[context.menu.num_candidates];
+    // Build candidates
+    for (int i = 0; i < context.menu.num_candidates; i++) {
+      RimeCandidate c = context.menu.candidates[i];
+      char *ctext = _copy_string(c.text);
+      carray[i] = env->make_string(env, ctext, strlen(ctext));
+    }
+    emacs_value candidates = em_list(env, context.menu.num_candidates, carray);
+    menu_a[5] = CONS_VALUE("candidates", candidates);
+    emacs_value menu = em_list(env, 6, menu_a);
+    result_a[2] = CONS_VALUE("menu", menu);
+  } else {
+    result_a[2] = CONS_NIL("menu");
   }
-  emacs_value candidates = em_list(env, context.menu.num_candidates, carray);
-  menu_a[5] = CONS_VALUE("candidates", candidates);
-  emacs_value menu = em_list(env, 6, menu_a);
-  result_a[2] = CONS_VALUE("menu", menu);
 
   // build result
   emacs_value result = em_list(env, result_size, result_a);
