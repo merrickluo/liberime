@@ -99,13 +99,17 @@ void em_signal_wrong_value(emacs_env *env, emacs_value actual)
 
 char *em_get_string(emacs_env *env, emacs_value arg)
 {
-  ptrdiff_t size;
-  env->copy_string_contents(env, arg, NULL, &size);
+  if (arg == NULL) {
+    return NULL;
+  } else {
+     ptrdiff_t size;
+    env->copy_string_contents(env, arg, NULL, &size);
 
-  char *buf = (char*) malloc(size * sizeof(char));
-  env->copy_string_contents(env, arg, buf, &size);
+    char *buf = (char*) malloc(size * sizeof(char));
+    env->copy_string_contents(env, arg, buf, &size);
 
-  return buf;
+    return buf;
+  }
 }
 
 emacs_value em_cons(emacs_env *env, emacs_value car, emacs_value cdr)
