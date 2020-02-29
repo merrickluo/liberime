@@ -7,33 +7,18 @@
 ;; This file is NOT part of GNU Emacs.
 
 ;;; Commentary:
+;; This file creates a translation loop that captures all user input after translation start.
+;; The input and output are get from liberime directly, when input are modified via the composition key,
+;; the confirmed words doesn't need to be confirm one more time.
+;; All outputs are returned by input-method-function for better integration with mode such EXWM-mode.
 
-;; rime input
-;;
-
-;;; Example config with doom emacs:
-
-;; (use-package! erime
-;;   :after-call after-find-file pre-command-hook
-;;   :defer 1
-;;   :init
-;;   (setq liberime-user-data-dir
-;;         (expand-file-name "local/pyim/rime" doom-private-dir))
-
-;;   (add-hook 'liberime-after-start-hook
-;;             (lambda ()
-;;               (liberime-select-schema "guhuwubi")))
-;;   :config
-;;   (setq default-input-method "erime"))
-
-;;
 ;;; Code:
 
 (require 'liberime-config)
 (require 'posframe nil t)
 
 (defgroup erime nil
-  "Rime is a frontend to liberime"
+  "Erime is a frontend to liberime"
   :group 'leim)
 
 (defcustom rime-disable-predicates
@@ -50,7 +35,7 @@
   :group 'erime)
 
 (defface erime-prompt
-  '((t (:inherit default :background "#333333" :foreground "#fcdc00")))
+    '((t (:inherit default :background "#333333" :foreground "#fcdc00")))
   "Face used for the rime page."
   :group 'erime)
 
@@ -104,14 +89,6 @@
                                  ;; End
                                  ("C-e" . 65367)))
 
-(defvar erime-aux-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map "\C-h" 'delete-backward-char)
-    (define-key map [delete] 'delete-backward-char)
-    (define-key map (kbd "DEL") 'delete-backward-char)
-    (define-key map [backspace] 'delete-backward-char)
-    map))
-
 (defvar erime-map
   (let ((map (make-sparse-keymap)))
     (dolist (i (number-sequence ?\  127))
@@ -132,7 +109,7 @@
    ;; \cC represents any character of category “C”, according to “M-x describe-categories”
    (looking-back "\\cc " (max (line-beginning-position) (- (point) 2)))
    ;; 英文,数字后保持英文输入
-   (looking-back "[a-zA-Z0-9]" (max (line-beginning-position) (1- (point))))))
+   (looking-back "[a-zA-Z0-9\\-]" (max (line-beginning-position) (1- (point))))))
 
 (defun erime-english-mode-p ()
   (unless (string-match " *temp*" (buffer-name))
@@ -182,9 +159,8 @@
                     (inhibit-quit t)
                     (modified-p (buffer-modified-p))
                     ;; rime local variables
-                    (erime-input-buffer
-                      (get-buffer-create " *rime-input*"))
                     (erime-translating t)
+                    context
                     result)
                (liberime-clear-composition)
                ;; Push back the last event on the event queue.
@@ -192,72 +168,63 @@
                (erime-start-translation)
                (if (stringp result)
                    (mapcar 'identity result)
-                   ;; if result are vectors, convert to a list, maybe unecessary
+                   ;; if result are vectors, convert to a list
                    (append result nil)))))))
 
 (defun erime-start-translation ()
   (while erime-translating
     (let ((keyseq (read-key-sequence-vector nil nil nil t))
-          context
-          composition 
-          preedit
-          prompt-str)
+          menu preedit prompt-str)
       (erime-translate-key keyseq)
       ;; continuation check
       (when (or result
                 (setq result (liberime-get-commit)))
         (setq erime-translating nil))
-      ;; update inpout buffer to match preedit
       (if (setq context (liberime-get-context))
           (progn
-            (setq composition (alist-get 'composition context))
-            (setq preedit (alist-get 'preedit composition))
-            (let* ((composition-length (alist-get 'length composition))
+            ;; format preedit
+            (let* ((composition (alist-get 'composition context))
+                   (composition-length (alist-get 'length composition))
                    (cursor-pos (alist-get 'cursor-pos composition))
-                   (menu (alist-get 'menu context))
-                   (highlighted-candidate-index (alist-get 'highlighted-candidate-index menu))
-                   (last-page-p (alist-get 'last-page-p menu))
-                   (num-candidates (alist-get 'num-candidates menu))
-                   (page-no (alist-get 'page-no menu))
-                   (candidates (alist-get 'candidates menu))
                    (cursor-distance-to-end (- composition-length cursor-pos)))
-              (with-current-buffer erime-input-buffer
-                (erase-buffer)
-                (insert preedit)
-                (backward-char cursor-distance-to-end))
-              (setq prompt-str
-                    (concat ":"
-                            ;; candidates
-                            (let (result)
-                              (dolist (i (number-sequence 0 (1- num-candidates)))
-                                ;; 高亮当前选择的词条
-                                (push (if (= i highlighted-candidate-index)
-                                          (format "[%d.%s]" (1+ i) (nth i candidates))
-                                          (format "%d.%s" (1+ i) (nth i candidates)))
-                                      result))
-                              (concat
-                               (mapconcat #'identity (reverse result) " ")
-                               ;; current page number
-                               (if last-page-p
-                                   (format "(%s<)" (1+ page-no))
-                                   (format "(%s)" (1+ page-no)))))))))
-          (setq prompt-str nil
-                preedit nil))
-      (setq prompt-str (concat
-                        (with-current-buffer erime-input-buffer
-                          (concat (buffer-substring-no-properties 1 (point)) "|"
-                                  (buffer-substring-no-properties (point) (point-max))))
-                        prompt-str))
+              (setq preedit (alist-get 'preedit composition))
+              (setq prompt-str (with-temp-buffer
+                                 (insert preedit)
+                                 (backward-char cursor-distance-to-end)
+                                 (insert "|")
+                                 (buffer-string))))
+            ;; format candidates
+            (when (setq menu (alist-get 'menu context))
+              (let* ((highlighted-candidate-index (alist-get 'highlighted-candidate-index menu))
+                     (last-page-p (alist-get 'last-page-p menu))
+                     (num-candidates (alist-get 'num-candidates menu))
+                     (page-no (alist-get 'page-no menu))
+                     (candidates (alist-get 'candidates menu)))
+                (setq prompt-str
+                      (concat prompt-str ":"
+                              (let (result)
+                                (dolist (i (number-sequence 0 (1- num-candidates)))
+                                  ;; 高亮当前选择的词条
+                                  (push (if (= i highlighted-candidate-index)
+                                            (format "[%d.%s]" (1+ i) (nth i candidates))
+                                            (format "%d.%s" (1+ i) (nth i candidates)))
+                                        result))
+                                (concat
+                                 (mapconcat #'identity (reverse result) " ")
+                                 ;; current page number
+                                 (if last-page-p
+                                     (format "(%s<)" (1+ page-no))
+                                     (format "(%s)" (1+ page-no)))))))))))
       ;; refresh prompt
       (if erime-translating
           (erime-prompt--refresh)
-          (if (get-buffer erime-tooltip-posframe-buffer)
-              (posframe-hide erime-tooltip-posframe-buffer)
-              (message nil)) 
-          (with-current-buffer erime-input-buffer
-            (erase-buffer))
+          ;; 支持非 menu key 顶屏
           (when preedit
-            (push (string-to-char preedit) unread-command-events)))))
+            (push (string-to-char preedit) unread-command-events)))
+      (unless prompt-str
+        (if (get-buffer erime-tooltip-posframe-buffer)
+              (posframe-hide erime-tooltip-posframe-buffer)
+              (message nil)))))
   result)
 
 (defun erime-translate-key (keyseq)
@@ -270,12 +237,10 @@
       ((and (string-match "^[[:alpha:]/]$" keyseq-name)
             (not (erime-english-mode-p)))
        (liberime-process-key key)
-       (with-current-buffer erime-input-buffer
-         (insert key))
        (setq erime-last-punctuation nil))
       ;; 2. punctuation: same punctuation press twice to go to the next candidate
       ((and (string-match (concat "^" erime-delimiter "$") keyseq-name)
-            (not (erime-input-empty-p)))
+            context)
        (liberime-process-key key))
       ((and (erime-fullwidth-mode-p)
             (string-match "^[[:punct:]]$" keyseq-name))
@@ -290,26 +255,12 @@
            (liberime-select-candidate 0))
        (setq erime-translating nil)
        (setq erime-last-punctuation key))
-      ;; 4. menu key
+      ;; 3. menu and composition key
       ((and (setq keysym-num
-                  (cdr (assoc keyseq-name erime-menu-keys))))
-       (if (erime-input-empty-p)
-           (setq result keyseq)
-           (liberime-process-key keysym-num)))
-      ;; 4. composition key
-      ((and (setq keysym-num
-                  (cdr (assoc keyseq-name erime-composition-keys)))
-            (not (erime-input-empty-p)))
-       (liberime-process-key keysym-num)
-       (with-current-buffer erime-input-buffer
-         (let* ((overriding-terminal-local-map erime-aux-map)
-                (bind (key-binding keyseq t)))
-           (if bind
-               (ignore-errors
-                 (call-interactively bind nil keyseq))
-               (let (message-log-max)
-                 (message "%s is undefined" (key-description keys))
-                 (undefined))))))
+                  (cdr (assoc keyseq-name (append erime-menu-keys
+                                                  erime-composition-keys))))
+            context)
+       (liberime-process-key keysym-num))
       (t (setq result (this-command-keys))))))
 
 (defun erime-prompt--refresh ()
@@ -319,19 +270,13 @@
       (erime-prompt--minibuffer-message (concat "\n" prompt-str))
       ;; 普通 buffer
       (if (and (eq erime-prompt-tooltip 'posframe)
-               (not (string-match " *temp*" (buffer-name)))
-               (posframe-valid-p))
-          (progn
-            (posframe-show erime-tooltip-posframe-buffer
-                           :string prompt-str
-                           :position (point)
-                           :background-color (face-attribute 'erime-prompt :background)
-                           :foreground-color (face-attribute 'erime-prompt :foreground))
-            (dolist (frame (frame-list))
-              (let ((buffer-info (frame-parameter frame 'posframe-buffer)))
-                (when (or (equal erime-tooltip-posframe-buffer (car buffer-info))
-                          (equal erime-tooltip-posframe-buffer (cdr buffer-info)))
-                  (set-frame-parameter frame 'parent-frame nil)))))
+               (not (string-match " *temp*" (buffer-name))))
+          (set-frame-parameter (posframe-show erime-tooltip-posframe-buffer
+                                              :string prompt-str
+                                              :position (point)
+                                              :background-color (face-attribute 'erime-prompt :background)
+                                              :foreground-color (face-attribute 'erime-prompt :foreground))
+                               'parent-frame nil)
           (message (propertize prompt-str 'face 'erime-prompt)))))
 
 (defun erime-prompt--minibuffer-message (string)
@@ -347,24 +292,6 @@
     (when quit-flag
       (setq quit-flag nil
             unread-command-events '(7)))))
-
-(defun posframe-valid-p ()
-  "Test posframe's status."
-  (and (>= emacs-major-version 26)
-       (featurep 'posframe)
-       (not (or noninteractive
-                emacs-basic-display
-                (not (display-graphic-p))))))
-
-(defun erime-input-empty-p ()
-  (= (buffer-size erime-input-buffer) 0))
-
-;; add word to ~/.emacs.d/rime/my_phrase.dict.yaml and sort
-(defun erime-add-to-user-dict ())
-
-;; add word to ~/.emacs.d/rime/custom_phrase.txt and sort:
-;; auto add pinyin code, prompt for confirmation
-(defun erime-add-to-custom-phrase ())
 
 ;;;###autoload
 (defvar erime-title "ㄓ" "The name displayed in mode-line of erime.")
