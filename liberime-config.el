@@ -47,7 +47,9 @@
                   (xdg-data-dirs)
                 '("/usr/share/local" "/usr/share"))))
     ('darwin
-     "/Library/Input Methods/Squirrel.app/Contents/SharedSupport"))
+     "/Library/Input Methods/Squirrel.app/Contents/SharedSupport")
+    ('windows-nt
+     (expand-file-name "build/data" liberime--root)))
   "Data directory on the system."
   :group 'liberime
   :type 'file)
