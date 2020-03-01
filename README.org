@@ -47,6 +47,9 @@ make test
 4. Add =/path/liberime/build= directory to the environment variable *PATH* for
    liberime to find the dependent dynamic library. 
 
+Use =./msys2-build.sh --help= for help message
+
+
 * Usage
 ** Initialize
 

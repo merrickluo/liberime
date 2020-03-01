@@ -5,6 +5,28 @@
 
 set -e
 
+# 架构
+ARCH="${MSYSTEM_CARCH}"
+
+# 包前缀
+PACKAGE_PREFIX="${MINGW_PACKAGE_PREFIX}"
+
+# 安装位置
+INSTALL_PREFIX="${MINGW_PREFIX}"
+
+# git 协议
+GIT_PROTOCOL="https"
+GIT_PROTOCOL_URL="https://github.com/"
+
+# job 数量
+JOB_NUMBER=1
+
+# archive 名字
+ARCHIVE_NAME=""
+
+
+
+
 #######################################
 # 复制所有dll依赖到指定目录
 # Arguments:
@@ -45,11 +67,11 @@ function install_deps() {
         base-devel
         zip
         git
-        mingw-w64-x86_64-cmake
-        mingw-w64-x86_64-gcc
-        mingw-w64-x86_64-boost
-        mingw-w64-x86_64-glog
-        mingw-w64-x86_64-yaml-cpp
+        ${PACKAGE_PREFIX}-cmake
+        ${PACKAGE_PREFIX}-gcc
+        ${PACKAGE_PREFIX}-boost
+        ${PACKAGE_PREFIX}-glog
+        ${PACKAGE_PREFIX}-yaml-cpp
     )
     pacman -S --needed --noconfirm ${dep_packages[@]}
 }
@@ -57,45 +79,49 @@ function install_deps() {
 # 编译 leveldb
 function build_leveldb() {
     if [[ ! -d "leveldb" ]]; then
-        git clone https://github.com/google/leveldb.git
+        git clone --depth 1 "${GIT_PROTOCOL_URL}google/leveldb.git"
     fi
     pushd leveldb
-    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="/usr" -DLEVELDB_BUILD_TESTS=OFF -DLEVELDB_BUILD_BENCHMARKS=OFF
-    cmake --build build --config Release --target install
+    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DLEVELDB_BUILD_TESTS=OFF -DLEVELDB_BUILD_BENCHMARKS=OFF
+    cmake --build build --config Release --target install -j ${JOB_NUMBER}
     popd
 }
 
 # 编译 marisa
 function build_marisa() {
     if [[ ! -d "marisa-trie" ]]; then
-        git clone https://github.com/s-yata/marisa-trie.git
+        git clone --depth 1 "${GIT_PROTOCOL_URL}s-yata/marisa-trie.git"
     fi
     pushd marisa-trie
     autoreconf -i
-    ./configure --enable-native-code --prefix="/usr"
-    make && make install
+    if [[ "${ARCH}" == "x86_64" ]]; then
+        ./configure --enable-native-code --prefix="${INSTALL_PREFIX}"
+    else
+        ./configure  --prefix="${INSTALL_PREFIX}"
+    fi
+    make -j ${JOB_NUMBER} && make install
     popd
 }
 
 # 编译 OpenCC
 function build_opencc() {
     if [[ ! -d "OpenCC" ]]; then
-        git clone https://github.com/BYVoid/OpenCC.git
+        git clone --depth 1 "${GIT_PROTOCOL_URL}BYVoid/OpenCC.git"
     fi
     pushd OpenCC
-    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="/usr" -DENABLE_GTEST=OFF
-    cmake --build build --config Release --target install
+    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DENABLE_GTEST=OFF
+    cmake --build build --config Release --target install -j ${JOB_NUMBER}
     popd
 }
 
 # 编译 librime
 function build_librime() {
     if [[ ! -d "librime" ]]; then
-        git clone https://github.com/rime/librime.git   
+        git clone "${GIT_PROTOCOL_URL}rime/librime.git"
     fi
     pushd librime
-    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="/usr" -DBUILD_DATA=ON -DBUILD_TEST=OFF -DBOOST_USE_CXX11=ON -DCMAKE_CXX_STANDARD_LIBRARIES="-lbcrypt"
-    cmake --build build --config Release --target install
+    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DBUILD_TEST=OFF -DBOOST_USE_CXX11=ON -DBUILD_STATIC=ON -DCMAKE_CXX_STANDARD_LIBRARIES="-lbcrypt"
+    cmake --build build --config Release --target install -j ${JOB_NUMBER}
     popd
 }
 
@@ -112,16 +138,16 @@ function build_liberime() {
     build_opencc
     build_librime
     popd
-    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="/usr"
-    cmake --build build --config Release
-  
+    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}"
+    cmake --build build --config Release -j ${JOB_NUMBER}
+    
     # 复制非系统依赖
-    cp /usr/lib/librime.dll build
-    copy_all_dll "build/librime.dll" build "mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
+    cp "${INSTALL_PREFIX}/lib/librime.dll" build
+    copy_all_dll "build/librime.dll" build "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
 
     ## 复制 opencc 词典
     mkdir -p build/data
-    cp -r /usr/share/opencc "build/data/"
+    cp -r "${INSTALL_PREFIX}/share/opencc" "build/data/"
 
     ## 复制 schema
     echo "fetch schema"
@@ -129,58 +155,118 @@ function build_liberime() {
     curl -fsSL https://git.io/rime-install | bash
     if [[ -d "plum" ]]; then
         cp plum/package/rime/*/*.yaml "build/data/"
+        cp plum/package/rime/*/*.txt "build/data/"
         rm -rf plum
     else
         echo "can not download schema, skip..."
     fi
-   
+    
 }
 
 # 打包liberime
-function package_liberime() {
-    local package_dir= "liberime-$(git rev-parse --short HEAD)"
-    local data_dir="${package_dir}/build"
-    if [[ -d "${package_dir}" ]]; then
-        rm -rf "${package_dir}"
+function archive_liberime() {
+    local archive_dir= "${ARCHIVE_NAME}"
+    local data_dir="${archive_dir}/build"
+    if [[ -d "${archive_dir}" ]]; then
+        rm -rf "${archive_dir}"
     fi
     mkdir -p ${data_dir} 
     cp liberime-config.el ${package_dir}
     cp README.org ${package_dir}
     cp build/liberime.dll ${data_dir}
     cp -r build/data ${data_dir}
-    cp /usr/lib/librime.dll ${data_dir}
+    cp "${INSTALL_PREFIX}/lib/librime.dll" ${data_dir}
     ## 复制 librime.dll 的所有依赖
-    copy_all_dll "${package_dir}/librime.dll" ${data_dir} "mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
+    copy_all_dll "${archive_dir}/librime.dll" ${data_dir} "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
     
     ## 压缩
-    zip  -r "${package_dir}.zip" "${package_dir}/*"
-    rm -rf ${package_dir}
-    echo "package liberime finished: $(PWD)/${package_dir}.zip"
+    if [[ -f "${archive_dir}.zip" ]]; then
+        rm -rf "${archive_dir}.zip"
+    fi
+
+    zip  -r "${archive_dir}.zip" "${archive_dir}/*"
+    rm -rf ${archive_dir}
+    echo "archive liberime finished: ${archive_dir}.zip"
 }
 
 function display_usage() {
-    cat <<EOF
-用法: ./msys2_build.sh [--package]
+    cat <<HELP
+用法: ./msys2_build.sh [选项]
 
       使用 msys2 构建 liberime.dll
 
 选项:
 
-    --package   打包 dll 依赖, opencc 词典, 默认的 scheme 到一个 zip 文件
+    -a, --archive=FILENAME      打包 dll 依赖, opencc 词典, 默认的 scheme 到一个 FILENAME.zip 文件
 
-EOF
+    -p, --protocol=PROTOCOL     git clone 时用到的协议，https 或者 ssh 
+
+    -j, --job=JOB_NUMBER        编译时的 job 数
+
+    -h, --help                  查看帮助
+
+HELP
 }
 
 function main() {
-    if [ "$1" == "-h" -o "$1" == "--help" ]; then
-        display_usage
-        exit 0
+    while true
+    do
+        case "$1" in
+            -h|--help)
+                display_usage;
+                exit 0
+                ;;
+            -a|--archive)
+                ARCHIVE_NAME="$2";
+                shift 2
+                ;;
+            -p|--protocol)
+                GIT_PROTOCOL="$2";
+                shift 2
+                ;;
+            -j|--job)
+                JOB_NUMBER="$2";
+                shift 2
+                ;;
+            --)
+                shift
+                break
+                ;;
+            *)
+                echo "错误的选项！"
+                exit 1
+        esac
+    done
+
+    if [[ "${GIT_PROTOCOL}" == "ssh" ]]; then
+        GIT_PROTOCOL_URL="git@github.com:"
+    elif [[ "${GIT_PROTOCOL}" == "https" ]]; then
+        GIT_PROTOCOL_URL="https://github.com/"
+    else
+        echo "错误的协议：使用 https 或 ssh"
+        exit 1
     fi
+
+    echo "start build liberime..."
     build_liberime
-    if [ "$1" == "-p" -o "$1" == "--package" ]; then
-        package_liberime
+
+    if [[ -n "ARCHIVE_NAME" ]]; then
+        echo "start archive liberime..."
+        archive_liberime
     fi
-    exit 0
+
 }
+
+# 选项
+ARGS=$(getopt -o ha:p:j: --long help,archive:,protocol:,job: -n "$0" -- "$@")
+
+
+if [[ $? != 0 ]]; then
+    echo "错误的选项！"
+    display_usage
+    exit 1
+fi
+
+eval set -- "${ARGS}"
 
 main "$@"
