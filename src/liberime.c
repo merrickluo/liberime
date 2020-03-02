@@ -38,6 +38,7 @@ const char *liberime_##name##__doc = (docstring "\n\n(fn " args ")")
 #define CANDIDATE_MAXSTRLEN 1024
 #define SCHEMA_MAXSTRLEN 1024
 #define CONFIG_MAXSTRLEN 1024
+#define INPUT_MAXSTRLEN 1024
 
 #define NO_SESSION_ERR "Cannot connect to librime session, make sure to run liberime-start first"
 
@@ -311,18 +312,38 @@ static emacs_value process_key(emacs_env *env, ptrdiff_t nargs, emacs_value args
   EmacsRime *rime = (EmacsRime*) data;
 
   int keycode = env->extract_integer(env, args[0]);
-  // printf("keycode is %d\n", keycode);
-  // const char *key = em_get_string(env, args[0]);
+  int mask = 0;
+  if (nargs == 2) {
+    mask = env->extract_integer(env, args[1]);
+  }
 
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
     return em_nil;
   }
 
-  if (rime->api->process_key(rime->session_id, keycode, 0)) {
+  if (rime->api->process_key(rime->session_id, keycode, mask)) {
     return em_t;
   }
   return em_nil;
+}
+
+DOCSTRING(get_input, "", "Get input");
+static emacs_value get_input(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime*) data;
+
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    return em_nil;
+  }
+
+  const char* input = rime->api->get_input(rime->session_id);
+
+  if (!input) {
+    return em_nil;
+  } else {
+    return env->make_string(env, input, strnlen(input, INPUT_MAXSTRLEN));
+  }
 }
 
 DOCSTRING(commit_composition, "", "Commit");
@@ -407,10 +428,6 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
     return em_nil;
   }
 
-  if (!context.menu.num_candidates) {
-    return em_nil;
-  }
-
   size_t result_size = 3;
   emacs_value result_a[result_size];
 
@@ -432,29 +449,36 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
   if (preedit_str)
     composition_a[4] = CONS_STRING("preedit", preedit_str);
   else
-    composition_a[4] = CONS_NIL("preedit");
+    // When we don't have a preedit,
+    // The composition should be nil.
+    return em_nil;
+    /* composition_a[4] = CONS_NIL("preedit"); */
 
   emacs_value composition_value = em_list(env, 5, composition_a);
   result_a[1] = CONS_VALUE("composition", composition_value);
 
   // 3. context.menu
-  emacs_value menu_a[6];
-  menu_a[0] = CONS_INT("highlighted-candidate-index", context.menu.highlighted_candidate_index);
-  menu_a[1] = CONS_VALUE("last-page-p", context.menu.is_last_page ? em_t : em_nil);
-  menu_a[2] = CONS_INT("num-candidates", context.menu.num_candidates);
-  menu_a[3] = CONS_INT("page-no", context.menu.page_no);
-  menu_a[4] = CONS_INT("page-size", context.menu.page_size);
-
-  emacs_value carray[context.menu.num_candidates];
-  for (int i = 0; i < context.menu.num_candidates; i++) {
-    RimeCandidate c = context.menu.candidates[i];
-    char *ctext = _copy_string(c.text);
-    carray[i] = env->make_string(env, ctext, strlen(ctext));
+  if (context.menu.num_candidates) {
+    emacs_value menu_a[6];
+    menu_a[0] = CONS_INT("highlighted-candidate-index", context.menu.highlighted_candidate_index);
+    menu_a[1] = CONS_VALUE("last-page-p", context.menu.is_last_page ? em_t : em_nil);
+    menu_a[2] = CONS_INT("num-candidates", context.menu.num_candidates);
+    menu_a[3] = CONS_INT("page-no", context.menu.page_no);
+    menu_a[4] = CONS_INT("page-size", context.menu.page_size);
+    emacs_value carray[context.menu.num_candidates];
+    // Build candidates
+    for (int i = 0; i < context.menu.num_candidates; i++) {
+      RimeCandidate c = context.menu.candidates[i];
+      char *ctext = _copy_string(c.text);
+      carray[i] = env->make_string(env, ctext, strlen(ctext));
+    }
+    emacs_value candidates = em_list(env, context.menu.num_candidates, carray);
+    menu_a[5] = CONS_VALUE("candidates", candidates);
+    emacs_value menu = em_list(env, 6, menu_a);
+    result_a[2] = CONS_VALUE("menu", menu);
+  } else {
+    result_a[2] = CONS_NIL("menu");
   }
-  emacs_value candidates = em_list(env, context.menu.num_candidates, carray);
-  menu_a[5] = CONS_VALUE("candidates", candidates);
-  emacs_value menu = em_list(env, 6, menu_a);
-  result_a[2] = CONS_VALUE("menu", menu);
 
   // build result
   emacs_value result = em_list(env, result_size, result_a);
@@ -617,7 +641,7 @@ static emacs_value get_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
       em_signal_rimeerr(env, 2, "failed to open schema config file");
       return em_nil;
   }
-  
+
   free(schema_id);
 
   bool success = false;
@@ -739,10 +763,11 @@ void liberime_init(emacs_env *env) {
   DEFUN("liberime-get-schema-list", get_schema_list, 0, 0);
 
   // input
-  DEFUN("liberime-process-key", process_key, 1, 1);
+  DEFUN("liberime-process-key", process_key, 1, 2);
   DEFUN("liberime-commit-composition", commit_composition, 0, 0);
   DEFUN("liberime-clear-composition", clear_composition, 0, 0);
   DEFUN("liberime-select-candidate", select_candidate, 1, 1);
+  DEFUN("liberime-get-input", get_input, 0, 0);
 
   // output
   DEFUN("liberime-get-commit", get_commit, 0, 0);
