@@ -37,6 +37,19 @@ make test
    make test
    #+END_SRC
 
+** Build On Windows msys2
+1. Open mingw64.exe terminal
+2. cd liberime directory
+3. build with =msys2-build.sh=
+#+BEGIN_SRC shell
+./msys2-build.sh
+#+END_SRC
+4. Add =/path/liberime/build= directory to the environment variable *PATH* for
+   liberime to find the dependent dynamic library. 
+
+Use =./msys2-build.sh --help= for help message
+
+
 * Usage
 ** Initialize
 
@@ -44,6 +57,11 @@ make test
 
 shared_data_dir:
 librime 安装后提供的共享数据，里面会有预置的 schema 等 [[https://github.com/rime/home/wiki/SharedData][各平台所在位置详情]]。
+
+注意：如果你用的是 Windows msys2 版本，不要将 shared_data_dir 设置为小狼毫的
+data 目录，因为小狼毫使用 MSVC 编译的，OpenCC 的 .ocd 文件格式不同。你可以设置为
+build 目录下的 data 目录。
+
 
 user_data_dir:
 推荐放在 "~/.emacs.d/rime",
