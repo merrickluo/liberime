@@ -27,6 +27,8 @@ ARCHIVE_NAME=""
 # 激活 rime log
 RIME_ENABLE_LOG="OFF"
 
+INSTALL_SCHEMA=""
+
 
 #######################################
 # 复制所有dll依赖到指定目录
@@ -96,7 +98,7 @@ function build_marisa() {
     pushd marisa-trie
     autoreconf -i
     if [[ "${ARCH}" == "x86_64" ]]; then
-        ./configure --enable-native-code --prefix="${INSTALL_PREFIX}"
+        ./configure --enable-native-code --disable-shared --prefix="${INSTALL_PREFIX}"
     else
         ./configure  --prefix="${INSTALL_PREFIX}"
     fi
@@ -110,7 +112,7 @@ function build_opencc() {
         git clone --depth 1 "${GIT_PROTOCOL_URL}BYVoid/OpenCC.git"
     fi
     pushd OpenCC
-    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DENABLE_GTEST=OFF
+    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DENABLE_GTEST=OFF -DBUILD_SHARED_LIBS=OFF
     cmake --build build --config Release --target install
     popd
 }
@@ -155,6 +157,7 @@ function build_liberime() {
     
     # 复制非系统依赖
     cp "${INSTALL_PREFIX}/lib/librime.dll" build
+    strip build/librime.dll
     copy_all_dll "build/librime.dll" build "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
 
     ## 复制 opencc 词典
@@ -162,10 +165,8 @@ function build_liberime() {
     cp -r "${INSTALL_PREFIX}/share/opencc" "build/data/"
 
     # 安裝 schema
-    pushd third_party_build
-    install_schema "${PWD}/../build/data"
-    popd
-   
+    cp -r "third_party_build/librime/data/minimal" "build/data/"
+    
     echo ""
     echo "Build Finished!!!"
 }
@@ -212,6 +213,8 @@ function display_usage() {
 
     -l, --log                   激活 rime 的 log
 
+    -s --schema                 安裝所有 schema
+
     -h, --help                  查看帮助
 
 HELP
@@ -227,7 +230,11 @@ function main() {
                 ;;
             -l|--log)
                 RIME_ENABLE_LOG="ON"
-                exit 0
+                shift
+                ;;
+            -s|--schema)
+                INSTALL_SCHEMA="TRUE"
+                shift
                 ;;
             -a|--archive)
                 ARCHIVE_NAME="$2";
@@ -268,10 +275,15 @@ function main() {
         archive_liberime
     fi
 
+    if [[ -n "${INSTALL_SCHEMA}" ]]; then
+        echo "install schema to ./build/data"
+        install_schema "build/data"
+    fi
+
 }
 
 # 选项
-ARGS=$(getopt -o hla:p:j: --long help,log,archive:,protocol:,job: -n "$0" -- "$@")
+ARGS=$(getopt -o hlsa:p:j: --long help,log,schema,archive:,protocol:,job: -n "$0" -- "$@")
 
 
 if [[ $? != 0 ]]; then
