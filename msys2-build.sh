@@ -110,14 +110,14 @@ function build_opencc() {
     fi
     pushd OpenCC
     cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DENABLE_GTEST=OFF
-    cmake --build build --config Release --target install -j ${JOB_NUMBER}
+    cmake --build build --config Release --target install
     popd
 }
 
 # 编译 librime
 function build_librime() {
     if [[ ! -d "librime" ]]; then
-        git clone "${GIT_PROTOCOL_URL}rime/librime.git"
+        git clone  --depth 1 "${GIT_PROTOCOL_URL}rime/librime.git"
     fi
     pushd librime
     cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DBUILD_TEST=OFF -DBOOST_USE_CXX11=ON -DBUILD_STATIC=ON -DCMAKE_CXX_STANDARD_LIBRARIES="-lbcrypt"
@@ -160,12 +160,15 @@ function build_liberime() {
     else
         echo "can not download schema, skip..."
     fi
-    
+
+    if [[ -d "third_party_build" ]]; then
+        rm -rf third_party_build
+    fi
 }
 
 # 打包liberime
 function archive_liberime() {
-    local archive_dir= "${ARCHIVE_NAME}"
+    local archive_dir="${ARCHIVE_NAME}"
     local data_dir="${archive_dir}/build"
     if [[ -d "${archive_dir}" ]]; then
         rm -rf "${archive_dir}"
@@ -250,7 +253,7 @@ function main() {
     echo "start build liberime..."
     build_liberime
 
-    if [[ -n "ARCHIVE_NAME" ]]; then
+    if [[ -n "${ARCHIVE_NAME}" ]]; then
         echo "start archive liberime..."
         archive_liberime
     fi
