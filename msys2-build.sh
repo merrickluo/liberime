@@ -24,7 +24,8 @@ JOB_NUMBER=1
 # archive 名字
 ARCHIVE_NAME=""
 
-
+# 激活 rime log
+RIME_ENABLE_LOG="OFF"
 
 
 #######################################
@@ -120,8 +121,19 @@ function build_librime() {
         git clone  --depth 1 "${GIT_PROTOCOL_URL}rime/librime.git"
     fi
     pushd librime
-    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DBUILD_TEST=OFF -DBOOST_USE_CXX11=ON -DBUILD_STATIC=ON -DCMAKE_CXX_STANDARD_LIBRARIES="-lbcrypt"
+    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DBUILD_TEST=OFF -DBOOST_USE_CXX11=ON -DBUILD_STATIC=ON -DENABLE_LOGGING="${RIME_ENABLE_LOG}" -DCMAKE_CXX_STANDARD_LIBRARIES="-lbcrypt"
     cmake --build build --config Release --target install -j ${JOB_NUMBER}
+    popd
+}
+
+# 用 plum 安裝 schema
+function install_schema() {
+    local install_dir="$1"
+    if [[ ! -d "plum" ]]; then
+        git clone --depth 1 "${GIT_PROTOCOL_URL}rime/plum.git"
+    fi
+    pushd plum
+    rime_dir="${install_dir}" bash rime-install
     popd
 }
 
@@ -149,21 +161,13 @@ function build_liberime() {
     mkdir -p build/data
     cp -r "${INSTALL_PREFIX}/share/opencc" "build/data/"
 
-    ## 复制 schema
-    echo "fetch schema"
-    echo "curl -fsSL https://git.io/rime-install | bash"
-    curl -fsSL https://git.io/rime-install | bash
-    if [[ -d "plum" ]]; then
-        cp plum/package/rime/*/*.yaml "build/data/"
-        cp plum/package/rime/*/*.txt "build/data/"
-        rm -rf plum
-    else
-        echo "can not download schema, skip..."
-    fi
-
-    if [[ -d "third_party_build" ]]; then
-        rm -rf third_party_build
-    fi
+    # 安裝 schema
+    pushd third_party_build
+    install_schema "${PWD}/../build/data"
+    popd
+   
+    echo ""
+    echo "Build Finished!!!"
 }
 
 # 打包liberime
@@ -206,6 +210,8 @@ function display_usage() {
 
     -j, --job=JOB_NUMBER        编译时的 job 数
 
+    -l, --log                   激活 rime 的 log
+
     -h, --help                  查看帮助
 
 HELP
@@ -217,6 +223,10 @@ function main() {
         case "$1" in
             -h|--help)
                 display_usage;
+                exit 0
+                ;;
+            -l|--log)
+                RIME_ENABLE_LOG="ON"
                 exit 0
                 ;;
             -a|--archive)
@@ -261,7 +271,7 @@ function main() {
 }
 
 # 选项
-ARGS=$(getopt -o ha:p:j: --long help,archive:,protocol:,job: -n "$0" -- "$@")
+ARGS=$(getopt -o hla:p:j: --long help,log,archive:,protocol:,job: -n "$0" -- "$@")
 
 
 if [[ $? != 0 ]]; then
