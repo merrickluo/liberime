@@ -125,6 +125,9 @@ function build_librime() {
     pushd librime
     cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DBUILD_TEST=OFF -DBOOST_USE_CXX11=ON -DBUILD_STATIC=ON -DENABLE_LOGGING="${RIME_ENABLE_LOG}" -DCMAKE_CXX_STANDARD_LIBRARIES="-lbcrypt"
     cmake --build build --config Release --target install -j ${JOB_NUMBER}
+    # liberime 通过 PATH 环境变量寻找 librime.dll, 将 librime.dll 复制到 bin, 就
+    # 不需要用户自己设置 PATH 环境变量了。
+    cp "${INSTALL_PREFIX}/lib/librime.dll" "${INSTALL_PREFIX}/bin/"
     popd
 }
 
