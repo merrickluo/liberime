@@ -15,8 +15,6 @@
 (require 'nadvice)
 (require 'cl-lib)
 
-(defvar liberime-search-candidate-limit nil)
-
 (defvar liberime--root
   (file-name-directory (or load-file-name buffer-file-name)))
 
@@ -85,14 +83,6 @@
               (and liberime-user-data-dir
                    (file-directory-p liberime-user-data-dir)))
     (user-error "Please set liberime-shared-data-dir or liberime-user-data-dir"))
-
-  ;; use liberime-search-candidate-limit if not provided
-  (defun limited-liberime-search (search &rest arguments)
-    (let ((pinyin (car arguments))
-          (limit (or (cadr arguments) liberime-search-candidate-limit)))
-      (apply search (list pinyin limit))))
-  (advice-add #'liberime-search :around #'limited-liberime-search)
-
   (liberime-start liberime-shared-data-dir liberime-user-data-dir)
   (run-hooks 'liberime-after-start-hook))
 
