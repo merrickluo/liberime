@@ -42,22 +42,24 @@ make test
 2. cd liberime directory
 3. User can run =./msys2-build.sh --help= for help message
 4. Build with =msys2-build.sh=
+
    #+BEGIN_SRC shell
    ./msys2-build.sh
    #+END_SRC
+
 5. If user load liberime-config failure, please check and make sure
    liberime can find librime.dll.
    1. Method 1: Add =/path/to/liberime/build= directory to the
       environment variable *PATH*, user can add the below line to
       msys2 ~/.bashrc file.
       
-      #+BEGIN_COMMENT
+      #+BEGIN_SRC shell
       export PATH=$PATH:/path/to/liberime/build
-      #+END_COMMENT
+      #+END_SRC
 
    2. Method 2: copy librime.dll to one of the directories.
-      3. /usr/local/bin
-      4. /usr/bin
+      1. /usr/local/bin
+      2. /usr/bin
 
 * Usage
 ** Initialize
