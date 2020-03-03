@@ -58,8 +58,9 @@ make test
       #+END_SRC
 
    2. Method 2: copy librime.dll to one of the directories.
-      1. /usr/local/bin
-      2. /usr/bin
+      1. the directory of emacs.exe
+      2. /usr/local/bin
+      3. /usr/bin
 
 * Usage
 ** Initialize
