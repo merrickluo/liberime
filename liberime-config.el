@@ -103,6 +103,13 @@
          (preedit (alist-get 'preedit composition)))
     preedit))
 
+(defun liberime-get-page-size ()
+  "Get rime page size from context."
+  (let* ((context (liberime-get-context))
+         (menu (alist-get 'menu context))
+         (page-size (alist-get 'page-size menu)))
+    page-size))
+
 (defun liberime-deploy()
   "deploy liberime to affect config file change"
   (interactive)
