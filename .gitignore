@@ -11,3 +11,5 @@ CMakeFiles/
 # ccls files
 .ccls-cache
 Debug
+
+/third_party_build/
