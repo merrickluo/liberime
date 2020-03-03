@@ -40,7 +40,7 @@ const char *liberime_##name##__doc = (docstring "\n\n(fn " args ")")
 #define CONFIG_MAXSTRLEN 1024
 #define INPUT_MAXSTRLEN 1024
 
-#define NO_SESSION_ERR "Cannot connect to librime session, make sure to run liberime-start first"
+#define NO_SESSION_ERR "Cannot connect to librime session, make sure to run liberime-start first."
 
 typedef struct _EmacsRime {
   RimeSessionId session_id;
@@ -119,7 +119,7 @@ EmacsRimeCandidates _get_candidates(EmacsRime *rime, size_t limit) {
 
 // bindings
 DOCSTRING(start, "SHARED_DATA_DIR USER_DATA_DIR",
-          "Start a rime session");
+          "Start a rime session.");
 static emacs_value start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
 
@@ -151,7 +151,7 @@ static emacs_value start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], vo
   return em_t;
 }
 
-DOCSTRING(finalize, "", "finalize librime for redeploy");
+DOCSTRING(finalize, "", "Finalize librime for redeploy.");
 static emacs_value finalize(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
   if (rime->session_id) {
@@ -175,7 +175,7 @@ void free_candidate_list(CandidateLinkedList *list) {
   }
 }
 
-DOCSTRING(search, "STRING LIMIT",
+DOCSTRING(search, "STRING &optional LIMIT",
           "Input STRING and return LIMIT number candidates.\n"
           "When LIMIT is nil, return all candidates.");
 static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
@@ -233,7 +233,7 @@ static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], v
   return result;
 }
 
-DOCSTRING(get_sync_dir, "", "get sync dir");
+DOCSTRING(get_sync_dir, "", "Get rime sync directory.");
 static emacs_value get_sync_dir(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
   if (!_ensure_session(rime)) {
@@ -245,7 +245,7 @@ static emacs_value get_sync_dir(emacs_env *env, ptrdiff_t nargs, emacs_value arg
   return env->make_string(env, sync_dir, strlen(sync_dir));
 }
 
-DOCSTRING(sync_user_data, "", "Sync user data");
+DOCSTRING(sync_user_data, "", "Sync rime user data.");
 static emacs_value sync_user_data(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
   if (!_ensure_session(rime)) {
@@ -267,7 +267,7 @@ static emacs_value get_schema_list(emacs_env *env, ptrdiff_t nargs, emacs_value 
 
   RimeSchemaList schema_list;
   if (!rime->api->get_schema_list(&schema_list)) {
-    em_signal_rimeerr(env, 1, "Get schema list form librime failed");
+    em_signal_rimeerr(env, 1, "Get schema list form librime failed.");
     return em_nil;
   }
 
@@ -307,7 +307,7 @@ static emacs_value select_schema(emacs_env *env, ptrdiff_t nargs, emacs_value ar
 }
 
 // input
-DOCSTRING(process_key, "KEY", "process key");
+DOCSTRING(process_key, "KEYCODE &optional MASK", "Send KEYCODE to rime session and process it.");
 static emacs_value process_key(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
 
@@ -328,7 +328,7 @@ static emacs_value process_key(emacs_env *env, ptrdiff_t nargs, emacs_value args
   return em_nil;
 }
 
-DOCSTRING(get_input, "", "Get input");
+DOCSTRING(get_input, "", "Get rime input.");
 static emacs_value get_input(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
 
@@ -346,7 +346,7 @@ static emacs_value get_input(emacs_env *env, ptrdiff_t nargs, emacs_value args[]
   }
 }
 
-DOCSTRING(commit_composition, "", "Commit");
+DOCSTRING(commit_composition, "", "Commit rime composition.");
 static emacs_value commit_composition(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
 
@@ -361,7 +361,7 @@ static emacs_value commit_composition(emacs_env *env, ptrdiff_t nargs, emacs_val
   return em_nil;
 }
 
-DOCSTRING(clear_composition, "", "Clear");
+DOCSTRING(clear_composition, "", "Clear rime composition.");
 static emacs_value clear_composition(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
 
@@ -374,7 +374,7 @@ static emacs_value clear_composition(emacs_env *env, ptrdiff_t nargs, emacs_valu
   return em_t;
 }
 
-DOCSTRING(select_candidate, "NUM", "Select");
+DOCSTRING(select_candidate, "NUM", "Select a rime candidate by NUM.");
 static emacs_value select_candidate(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
 
@@ -388,7 +388,7 @@ static emacs_value select_candidate(emacs_env *env, ptrdiff_t nargs, emacs_value
 
 // output
 
-DOCSTRING(get_commit, "", "Get commit");
+DOCSTRING(get_commit, "", "Get rime commit.");
 static emacs_value get_commit(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
 
@@ -413,7 +413,7 @@ static emacs_value get_commit(emacs_env *env, ptrdiff_t nargs, emacs_value args[
   return em_nil;
 }
 
-DOCSTRING(get_context, "", "Get context");
+DOCSTRING(get_context, "", "Get rime context.");
 static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
 
@@ -424,7 +424,7 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
 
   RIME_STRUCT(RimeContext, context);
   if (!rime->api->get_context(rime->session_id, &context)){
-    em_signal_rimeerr(env, 2, "cannot get context");
+    em_signal_rimeerr(env, 2, "Cannot get context.");
     return em_nil;
   }
 
@@ -488,7 +488,9 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
   return result;
 }
 
-DOCSTRING(get_user_config, "", "Get user config");
+DOCSTRING(get_user_config, "USER-CONFIG OPTION &optional RETURN-VALUE-TYPE",
+          "Get OPTION of rime USER-CONFIG.\n"
+          "The return value type can be set with RETURN-VALUE-TYPE.");
 static emacs_value get_user_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
 
@@ -498,7 +500,7 @@ static emacs_value get_user_config(emacs_env *env, ptrdiff_t nargs, emacs_value 
   }
 
   if (nargs < 2) {
-    em_signal_rimeerr(env, 2, "invalid arguments");
+    em_signal_rimeerr(env, 2, "Invalid arguments.");
     return em_nil;
   }
 
@@ -512,7 +514,7 @@ static emacs_value get_user_config(emacs_env *env, ptrdiff_t nargs, emacs_value 
   RimeConfig *config = malloc(sizeof(RimeConfig));
   // 注意user_config_open是从user_data_dir下获取
   if (!rime->api->user_config_open(config_id, config)) {
-        em_signal_rimeerr(env, 2, "failed to open user config file");
+        em_signal_rimeerr(env, 2, "Failed to open user config file.");
       return em_nil;
   }
 
@@ -539,14 +541,16 @@ static emacs_value get_user_config(emacs_env *env, ptrdiff_t nargs, emacs_value 
 
   rime->api->config_close(config);
   if (!success) {
-    em_signal_rimeerr(env, 2, "failed to get config");
+    em_signal_rimeerr(env, 2, "Failed to get config.");
     return em_nil;
   }
 
   return result;
 }
 
-DOCSTRING(set_user_config, "", "Set user config");
+DOCSTRING(set_user_config, "USER-CONFIG OPTION VALUE &optional VALUE-TYPE",
+          "Set rime USER-CONFIG OPTION to VALUE.\n"
+          "When VALUE-TYPE is non-nil, VALUE will be converted to this type.");
 static emacs_value set_user_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
 
@@ -555,7 +559,7 @@ static emacs_value set_user_config(emacs_env *env, ptrdiff_t nargs, emacs_value 
   }
 
   if (nargs < 3) {
-    em_signal_rimeerr(env, 2, "invalid arguments");
+    em_signal_rimeerr(env, 2, "Invalid arguments.");
   }
 
   const char *config_id = em_get_string(env, args[0]);
@@ -568,7 +572,7 @@ static emacs_value set_user_config(emacs_env *env, ptrdiff_t nargs, emacs_value 
 
   RimeConfig *config = malloc(sizeof(RimeConfig));
   if (!rime->api->user_config_open(config_id, config)) {
-    em_signal_rimeerr(env, 2, "failed to open user config file");
+    em_signal_rimeerr(env, 2, "Failed to open user config file.");
     return em_nil;
   }
 
@@ -591,7 +595,9 @@ static emacs_value set_user_config(emacs_env *env, ptrdiff_t nargs, emacs_value 
 }
 
 
-DOCSTRING(get_schema_config, "", "Get schema config");
+DOCSTRING(get_schema_config, "SCHEMA-CONFIG OPTION &optional RETURN-VALUE-TYPE",
+          "Get OPTION of rime SCHEMA-CONFIG.\n"
+          "The return value type can be set with RETURN-VALUE-TYPE.");
 static emacs_value get_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
 
@@ -601,7 +607,7 @@ static emacs_value get_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
   }
 
   if (nargs < 2) {
-    em_signal_rimeerr(env, 2, "invalid arguments");
+    em_signal_rimeerr(env, 2, "Invalid arguments.");
     return em_nil;
   }
 
@@ -616,7 +622,7 @@ static emacs_value get_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
     }
   } else {
     if (strlen(arg0) > max_schema_length) {
-      em_signal_rimeerr(env, 2, "schema id too long");
+      em_signal_rimeerr(env, 2, "Schema id too long.");
       return em_nil;
     }
 
@@ -625,7 +631,7 @@ static emacs_value get_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
 
   if (strlen(schema_id) == 0) {
     free(schema_id);
-    em_signal_rimeerr(env, 2, "error length of schema id");
+    em_signal_rimeerr(env, 2, "Error length of schema id.");
     return em_nil;
   }
 
@@ -638,7 +644,7 @@ static emacs_value get_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
   RimeConfig *config = malloc(sizeof(RimeConfig));
   if (!rime->api->schema_open(schema_id, config)) {
       free(schema_id);
-      em_signal_rimeerr(env, 2, "failed to open schema config file");
+      em_signal_rimeerr(env, 2, "Failed to open schema config file.");
       return em_nil;
   }
 
@@ -667,14 +673,16 @@ static emacs_value get_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
 
   rime->api->config_close(config);
   if (!success) {
-    em_signal_rimeerr(env, 2, "failed to get config");
+    em_signal_rimeerr(env, 2, "Failed to get config.");
     return em_nil;
   }
 
   return result;
 }
 
-DOCSTRING(set_schema_config, "", "Set schema config");
+DOCSTRING(set_schema_config, "CONFIG OPTION VALUE &optional VALUE-TYPE",
+          "Set rime SCHEMA-CONFIG OPTION to VALUE.\n"
+          "When VALUE-TYPE is non-nil, VALUE will be converted to this type.");
 static emacs_value set_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime*) data;
 
@@ -683,7 +691,7 @@ static emacs_value set_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
   }
 
   if (nargs < 3) {
-    em_signal_rimeerr(env, 2, "invalid arguments");
+    em_signal_rimeerr(env, 2, "Invalid arguments.");
   }
 
   const char *arg0  = em_get_string(env, args[0]);
@@ -692,12 +700,12 @@ static emacs_value set_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
   memset(schema_id, 0, max_schema_length);
     if (arg0 == NULL || strlen(arg0) == 0) {
         if (!rime->api->get_current_schema(rime->session_id, schema_id, max_schema_length)) {
-        em_signal_rimeerr(env, 2, "error get current schema");
+        em_signal_rimeerr(env, 2, "Error get current schema.");
         return em_nil;
     }
   } else {
     if (strlen(arg0) > max_schema_length) {
-      em_signal_rimeerr(env, 2, "schema id too long");
+      em_signal_rimeerr(env, 2, "Schema id too long.");
       return em_nil;
     }
 
@@ -706,7 +714,7 @@ static emacs_value set_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
 
   if (strlen(schema_id) == 0) {
     free(schema_id);
-    em_signal_rimeerr(env, 2, "error length of schema id");
+    em_signal_rimeerr(env, 2, "Error length of schema id.");
     return em_nil;
   }
 
@@ -720,7 +728,7 @@ static emacs_value set_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
   RimeConfig *config = (RimeConfig *)malloc(sizeof(RimeConfig));
   if (!rime->api->schema_open(schema_id, config)) {
       free(schema_id);
-      em_signal_rimeerr(env, 2, "failed to open schema config file");
+      em_signal_rimeerr(env, 2, "Failed to open schema config file.");
       return em_nil;
   }
 
@@ -753,7 +761,7 @@ void liberime_init(emacs_env *env) {
 
   if (!rime->api) {
     free(rime);
-    em_signal_rimeerr(env, 1, "No librime found");
+    em_signal_rimeerr(env, 1, "No librime found.");
     return;
   }
 
