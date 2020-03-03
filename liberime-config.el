@@ -96,6 +96,13 @@
   (liberime-start liberime-shared-data-dir liberime-user-data-dir)
   (run-hooks 'liberime-after-start-hook))
 
+(defun liberime-get-preedit ()
+  "Get rime preedit."
+  (let* ((context (liberime-get-context))
+         (composition (alist-get 'composition context))
+         (preedit (alist-get 'preedit composition)))
+    preedit))
+
 (defun liberime-deploy()
   "deploy liberime to affect config file change"
   (interactive)
