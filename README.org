@@ -37,18 +37,30 @@ make test
    make test
    #+END_SRC
 
-** Build On Windows msys2
-1. Open mingw64.exe terminal
+** Build On Windows (Msys2)
+1. Open msys2 terminal
 2. cd liberime directory
-3. build with =msys2-build.sh=
-#+BEGIN_SRC shell
-./msys2-build.sh
-#+END_SRC
-4. Add =/path/liberime/build= directory to the environment variable *PATH* for
-   liberime to find the dependent dynamic library. 
+3. User can run =./msys2-build.sh --help= for help message
+4. Build with =msys2-build.sh=
 
-Use =./msys2-build.sh --help= for help message
+   #+BEGIN_SRC shell
+   ./msys2-build.sh
+   #+END_SRC
 
+5. If user load liberime-config failure, please check and make sure
+   liberime can find librime.dll.
+   1. Method 1: Add =/path/to/liberime/build= directory to the
+      environment variable *PATH*, user can add the below line to
+      msys2 ~/.bashrc file.
+      
+      #+BEGIN_SRC shell
+      export PATH=$PATH:/path/to/liberime/build
+      #+END_SRC
+
+   2. Method 2: copy librime.dll to one of the directories.
+      1. the directory of emacs.exe
+      2. /usr/local/bin
+      3. /usr/bin
 
 * Usage
 ** Initialize
