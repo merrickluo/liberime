@@ -115,6 +115,11 @@ this function will go to proper page then select a candidate."
       (liberime-process-key 65366)) ;发送翻页
     (liberime-select-candidate n)))
 
+(defun liberime-clear-commit ()
+  "Clear the lastest rime commit."
+  ;; NEED IMPROVE: Second run `liberime-get-commit' will clear commit.
+  (liberime-get-commit))
+
 (defun liberime-deploy()
   "deploy liberime to affect config file change"
   (interactive)
