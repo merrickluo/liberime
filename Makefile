@@ -1,14 +1,14 @@
 EMACS = emacs
 TYPE=Release
 
-liberime:
+liberime-core:
 	mkdir -p build
 	cd build && cmake -DCMAKE_BUILD_TYPE=${TYPE} .. && make
 
 clean:
 	rm -rf build
 
-test: liberime
+test: liberime-core
 	${EMACS} -Q -L build -L . test.el
 
 ccls:

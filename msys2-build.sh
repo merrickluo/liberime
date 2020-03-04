@@ -182,9 +182,10 @@ function archive_liberime() {
         rm -rf "${archive_dir}"
     fi
     mkdir -p ${data_dir} 
+    cp liberime.el ${package_dir}
     cp liberime-config.el ${package_dir}
     cp README.org ${package_dir}
-    cp build/liberime.dll ${data_dir}
+    cp build/liberime-core.dll ${data_dir}
     cp -r build/data ${data_dir}
     cp "${INSTALL_PREFIX}/lib/librime.dll" ${data_dir}
     ## 复制 librime.dll 的所有依赖
@@ -204,7 +205,7 @@ function display_usage() {
     cat <<HELP
 用法: ./msys2_build.sh [选项]
 
-      使用 msys2 构建 liberime.dll
+      使用 msys2 构建 liberime-core.dll
 
 选项:
 

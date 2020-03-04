@@ -4,7 +4,7 @@
 
 #include "emacs-module.h"
 #include "interface.h"
-#include "liberime.h"
+#include "liberime-core.h"
 
 /* Declare mandatory GPL symbol.  */
 int plugin_is_GPL_compatible;
@@ -18,7 +18,7 @@ int emacs_module_init (struct emacs_runtime *ert) EMACS_NOEXCEPT
 
   liberime_init(env);
 
-  em_provide (env, "liberime");
+  em_provide (env, "liberime-core");
 
   /* loaded successfully */
   return 0;

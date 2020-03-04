@@ -47,7 +47,7 @@ make test
    ./msys2-build.sh
    #+END_SRC
 
-5. If user load liberime-config failure, please check and make sure
+5. If user load liberime failure, please check and make sure
    liberime can find librime.dll.
    1. Method 1: Add =/path/to/liberime/build= directory to the
       environment variable *PATH*, user can add the below line to
@@ -83,11 +83,11 @@ user_data_dir:
 
 使用 GitHub Repo
 #+BEGIN_SRC emacs-lisp
-(use-package liberime-config
-  :quelpa (liberime-config
+(use-package liberime
+  :quelpa (liberime
            :fetcher github
            :repo "merrickluo/liberime"
-           :files ("CMakeLists.txt" "Makefile" "src" "liberime-config.el"))
+           :files ("CMakeLists.txt" "Makefile" "src" "liberime.el" "liberime-config.el))
   :init
   (add-hook 'liberime-after-start-hook
             (lambda ()
@@ -96,11 +96,11 @@ user_data_dir:
 
 使用本地文件
 #+BEGIN_SRC emacs-lisp
-(use-package liberime-config
-  :quelpa (liberime-config
+(use-package liberime
+  :quelpa (liberime
            :fetcher file
            :path "~/Develop/emacs/liberime"
-           :files ("CMakeLists.txt" "Makefile" "src" "liberime-config.el"))
+           :files ("CMakeLists.txt" "Makefile" "src" "liberime.el" "liberime-config.el))
   :init
   (add-hook 'after-liberime-load-hook
             (lambda ()
@@ -117,7 +117,7 @@ user_data_dir:
 #+NAME setup pyim
 #+BEGIN_SRC emacs-lisp
 (use-package pyim
-  :after liberime-config
+  :after liberime
   :config
   (setq default-input-method "pyim")
   (setq pyim-default-scheme 'rime))
@@ -133,7 +133,7 @@ user_data_dir:
 
 默认情况下 liberime 的 installation.yaml 在
 $HOME/.emacs.d/rime/installation.yaml，用户只需要在里面添加 sync_dir ，就可以使用
-liberime-config 提供的 ~(liberime-sync)~ 方法进行同步了。还可以将其加入到
+liberime 提供的 ~(liberime-sync)~ 方法进行同步了。还可以将其加入到
 emacs 的 ~after-init-hook~ 中自动进行同步。
 
 #+begin_src emacs-lisp
