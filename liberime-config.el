@@ -100,6 +100,21 @@
          (page-size (alist-get 'page-size menu)))
     page-size))
 
+(defun liberime-select-candidate-crosspage (num)
+  "Select rime candidate cross page.
+
+This function is different from `liberime-select-candidate', When
+NUM > page size, `liberime-select-candidate' do nothing, while
+this function will go to proper page then select a candidate."
+  (let* ((page-size (liberime-get-page-size))
+         (position (- num 1))
+         (page-n (/ position page-size))
+         (n (% position page-size)))
+    (liberime-process-key 65360) ;回退到第一页
+    (dotimes (_ page-n)
+      (liberime-process-key 65366)) ;发送翻页
+    (liberime-select-candidate n)))
+
 (defun liberime-deploy()
   "deploy liberime to affect config file change"
   (interactive)
