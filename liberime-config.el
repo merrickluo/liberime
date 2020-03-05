@@ -12,5 +12,8 @@
 
 ;;; Code:
 
-(require 'liberime)
+(if (require 'liberime nil t)
+    (message "Liberime: please use (require 'liberime) instead of (require 'liberime-config).")
+  (message "Liberime: (require 'liberime) failure, please check your quelpa config."))
+
 (provide 'liberime-config)
