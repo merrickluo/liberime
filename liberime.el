@@ -53,6 +53,27 @@
    (or (locate-library "liberime")
        (locate-library "liberime-config"))))
 
+(defun liberime-open-directory (directory)
+  "Open DIRECTORY with external app."
+  (let ((directory (expand-file-name directory)))
+    (cond ((string-equal system-type "windows-nt")
+           (w32-shell-execute "open" directory))
+          ((string-equal system-type "darwin")
+           (concat "open " (shell-quote-argument directory)))
+          ((string-equal system-type "gnu/linux")
+           (let ((process-connection-type nil))
+             (start-process "" nil "xdg-open" directory))))))
+
+(defun liberime-open-user-data-dir ()
+  "Open user data dir with external app."
+  (interactive)
+  (liberime-open-directory liberime-user-data-dir))
+
+(defun liberime-open-package-directory ()
+  "Open liberime library directory with external app."
+  (interactive)
+  (liberime-open-directory (liberime-get-library-directory)))
+
 (defun liberime-get-module-file ()
   "Return the path of liberime-core file."
   (when (liberime-get-library-directory)
