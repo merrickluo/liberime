@@ -29,6 +29,10 @@ RIME_ENABLE_LOG="OFF"
 
 INSTALL_SCHEMA=""
 
+
+# Archive
+ARCHIVE_DIR="/d/liberime-archive"
+
 function repeat() {
     set +e
     count=0
@@ -204,29 +208,34 @@ function build_liberime() {
 
 # 打包liberime
 function archive_liberime() {
-    local archive_dir="${ARCHIVE_NAME}"
-    local data_dir="${archive_dir}/build"
-    if [[ -d "${archive_dir}" ]]; then
-        rm -rf "${archive_dir}"
-    fi
-    mkdir -p ${data_dir} 
-    cp liberime.el ${package_dir}
-    cp liberime-config.el ${package_dir}
-    cp README.org ${package_dir}
-    cp build/liberime-core.dll ${data_dir}
-    cp -r build/data ${data_dir}
-    cp "${INSTALL_PREFIX}/lib/librime.dll" ${data_dir}
-    ## 复制 librime.dll 的所有依赖
-    copy_all_dll "${archive_dir}/librime.dll" ${data_dir} "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
-    
-    ## 压缩
-    if [[ -f "${archive_dir}.zip" ]]; then
-        rm -rf "${archive_dir}.zip"
+    local temp_dir="${ARCHIVE_DIR}/temp"
+    local temp_data_dir="${ARCHIVE_DIR}/temp/build"
+    local zip_file="${ARCHIVE_DIR}/liberime-archive.zip"
+    if [[ -d "${ARCHIVE_DIR}" ]]; then
+        rm -rf "${ARCHIVE_DIR}"
     fi
 
-    zip  -r "${archive_dir}.zip" "${archive_dir}/*"
-    rm -rf ${archive_dir}
-    echo "archive liberime finished: ${archive_dir}.zip"
+    mkdir -p ${temp_data_dir} 
+    cp liberime.el ${temp_dir}
+    cp liberime-config.el ${temp_dir}
+    cp README.org ${temp_dir}
+
+    mkdir -p ${temp_data_dir} 
+    cp build/liberime-core.dll ${temp_data_dir}
+    cp -r build/data ${temp_data_dir}
+    cp "${INSTALL_PREFIX}/lib/librime.dll" ${temp_data_dir}
+    ## 复制 librime.dll 的所有依赖
+    copy_all_dll "${temp_data_dir}/librime.dll" ${temp_data_dir} "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
+    
+    ## 压缩
+    if [[ -f "${zip_file}" ]]; then
+        rm -rf "${zip_file}"
+    fi
+
+    cd ${temp_dir}
+    zip -r "${zip_file}" ./ > /dev/null
+    rm -rf ${temp_dir}
+    echo "Archive liberime to file: ${zip_file}"
 }
 
 function display_usage() {
@@ -268,10 +277,6 @@ function main() {
                 INSTALL_SCHEMA="TRUE"
                 shift
                 ;;
-            -a|--archive)
-                ARCHIVE_NAME="$2";
-                shift 2
-                ;;
             -p|--protocol)
                 GIT_PROTOCOL="$2";
                 shift 2
@@ -302,10 +307,8 @@ function main() {
     echo "start build liberime..."
     build_liberime
 
-    if [[ -n "${ARCHIVE_NAME}" ]]; then
-        echo "start archive liberime..."
-        archive_liberime
-    fi
+    echo "start archive liberime..."
+    archive_liberime
 
     if [[ -n "${INSTALL_SCHEMA}" ]]; then
         echo "install schema to ./build/data"
