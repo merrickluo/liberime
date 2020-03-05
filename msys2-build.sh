@@ -200,7 +200,7 @@ function build_liberime() {
     cp -r "${INSTALL_PREFIX}/share/opencc" "build/data/"
 
     # 安裝 schema
-    cp -r "third_party_build/librime/data/minimal" "build/data/"
+    cp -r third_party_build/librime/data/minimal/* "build/data/"
     
     echo ""
     echo "Build Finished!!!"
