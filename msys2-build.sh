@@ -66,6 +66,7 @@ function copy_all_dll() {
 
 # 安装依赖
 function install_deps() {
+    echo "########## Install build dependences ##########"
     local dep_packages=(
         base-devel
         zip
@@ -81,6 +82,7 @@ function install_deps() {
 
 # 编译 leveldb
 function build_leveldb() {
+    echo "########## Build and install leveldb ##########"
     if [[ ! -d "leveldb" ]]; then
         git clone --depth 1 "${GIT_PROTOCOL_URL}google/leveldb.git"
     fi
@@ -92,6 +94,7 @@ function build_leveldb() {
 
 # 编译 marisa
 function build_marisa() {
+    echo "########## Build and install marisa-tries ##########"
     if [[ ! -d "marisa-trie" ]]; then
         git clone --depth 1 "${GIT_PROTOCOL_URL}s-yata/marisa-trie.git"
     fi
@@ -108,6 +111,7 @@ function build_marisa() {
 
 # 编译 OpenCC
 function build_opencc() {
+    echo "########## Build and install opencc ##########"
     if [[ ! -d "OpenCC" ]]; then
         git clone --depth 1 "${GIT_PROTOCOL_URL}BYVoid/OpenCC.git"
     fi
@@ -119,6 +123,7 @@ function build_opencc() {
 
 # 编译 librime
 function build_librime() {
+    echo "########## Build and install librime ##########"
     if [[ ! -d "librime" ]]; then
         git clone  --depth 1 "${GIT_PROTOCOL_URL}rime/librime.git"
     fi
@@ -133,6 +138,7 @@ function build_librime() {
 
 # 用 plum 安裝 schema
 function install_schema() {
+    echo "########## Install librime schema ##########"
     local install_dir="$1"
     if [[ ! -d "plum" ]]; then
         git clone --depth 1 "${GIT_PROTOCOL_URL}rime/plum.git"
@@ -144,6 +150,7 @@ function install_schema() {
 
 # 编译 liberime
 function build_liberime() {
+    echo "########## Build and install liberime ##########"
     install_deps
     if [[ ! -d "third_party_build" ]]; then
         mkdir third_party_build
