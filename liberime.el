@@ -21,11 +21,6 @@
 (defvar liberime--module-file
   (concat liberime--root "build/liberime-core" module-file-suffix))
 
-(defcustom after-liberime-load-hook nil
-  "List of functions to be called before quelpa."
-  :group 'liberime
-  :type 'hook)
-
 (defcustom liberime-after-start-hook nil
   "List of functions to be called after liberime start"
   :group 'liberime
@@ -63,8 +58,7 @@
     (load-file liberime--module-file))
   (unless (featurep 'liberime-core)
     (t (error "cannot load librime-core module")))
-  (liberime--start)
-  (run-hooks 'after-liberime-load-hook))
+  (liberime--start))
 
 (defun liberime-build ()
   (interactive)
