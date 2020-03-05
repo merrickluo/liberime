@@ -175,18 +175,23 @@ function install_schema() {
 
 # 编译 liberime
 function build_liberime() {
-    install_deps
-    if [[ ! -d "third_party_build" ]]; then
-        mkdir third_party_build
+    if [[ ! -f "build/librime.dll" ]]; then
+        install_deps
+        if [[ ! -d "third_party_build" ]]; then
+            mkdir third_party_build
+        fi
+        # 编译第三方依赖
+        pushd third_party_build
+        build_leveldb
+        build_marisa
+        build_opencc
+        build_librime
+        popd
+    else
+        echo "Note: Do not build leveldb, marise, opencc and librime,"
+        echo "Note: Remove ./build and ./third_party_build directory to rebuild them."
     fi
-    # 编译第三方依赖
-    pushd third_party_build
-    build_leveldb
-    build_marisa
-    build_opencc
-    build_librime
-    popd
-
+    
     echo "########## Build and install liberime ##########"
 
     cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}"
