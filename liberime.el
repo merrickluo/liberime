@@ -140,12 +140,13 @@
       (unless (featurep 'liberime-core)
         (load-file (liberime-get-module-file)))))
   (if (not (featurep 'liberime-core))
-      (let ((buf (get-buffer-create "*liberime message*")))
-        (with-current-buffer buf
-          (erase-buffer)
-          (insert liberime-message)
-          (goto-char (point-min)))
-        (pop-to-buffer buf))
+      (when (> (length liberime-message) 0)
+        (let ((buf (get-buffer-create "*liberime message*")))
+          (with-current-buffer buf
+            (erase-buffer)
+            (insert liberime-message)
+            (goto-char (point-min)))
+          (pop-to-buffer buf)))
     (liberime--start)))
 
 (liberime-load)
