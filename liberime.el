@@ -66,7 +66,8 @@
   (liberime--start)
   (run-hooks 'after-liberime-load-hook))
 
-(defun liberime--build ()
+(defun liberime-build ()
+  (interactive)
   (let ((default-directory liberime--root))
     (set-process-sentinel
      (start-process "liberime-build" "*liberime build*" "make")
@@ -149,7 +150,7 @@ you should specify sync_dir in ~/.emacs.d/rime/installation.yaml
     (error "Module support not detected, liberime can't work"))
   (cond
    ((file-exists-p liberime--module-file) (liberime--load))
-   ((y-or-n-p "liberime-core must be built, do so now?") (liberime--build))
+   ((y-or-n-p "liberime-core must be built, do so now?") (liberime-build))
    (t (error "liberime-core not loaded"))))
 
 (liberime-load)
