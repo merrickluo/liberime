@@ -126,6 +126,10 @@
        (file-exists-p (liberime-get-module-file))
        (featurep 'liberime-core)))
 
+(defun liberime--start ()
+  (liberime-start liberime-shared-data-dir (liberime-get-user-data-dir))
+  (run-hooks 'liberime-after-start-hook))
+
 ;;;###autoload
 (defun liberime-load ()
   (interactive)
@@ -141,8 +145,7 @@
           (insert liberime-message)
           (goto-char (point-min)))
         (pop-to-buffer buf))
-    (liberime-start liberime-shared-data-dir (liberime-get-user-data-dir))
-    (run-hooks 'liberime-after-start-hook)))
+    (liberime--start)))
 
 (liberime-load)
 
