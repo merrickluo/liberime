@@ -175,7 +175,6 @@ function install_schema() {
 
 # 编译 liberime
 function build_liberime() {
-    echo "########## Build and install liberime ##########"
     install_deps
     if [[ ! -d "third_party_build" ]]; then
         mkdir third_party_build
@@ -187,6 +186,9 @@ function build_liberime() {
     build_opencc
     build_librime
     popd
+
+    echo "########## Build and install liberime ##########"
+
     cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}"
     cmake --build build --config Release -j ${JOB_NUMBER}
     
@@ -208,6 +210,7 @@ function build_liberime() {
 
 # 打包liberime
 function archive_liberime() {
+    echo "########## Archive librime ##########"
     local temp_dir="${ARCHIVE_DIR}/temp"
     local temp_data_dir="${ARCHIVE_DIR}/temp/build"
     local zip_file="${ARCHIVE_DIR}/liberime-archive.zip"
@@ -304,10 +307,8 @@ function main() {
         exit 1
     fi
 
-    echo "start build liberime..."
     build_liberime
 
-    echo "start archive liberime..."
     archive_liberime
 
     if [[ -n "${INSTALL_SCHEMA}" ]]; then
