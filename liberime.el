@@ -63,7 +63,8 @@
       then build liberime-core module according to README.org,
       Shortcut: (liberime-open-package-readme)
    b. Linux user can try (liberime-build) shortcut function.
-   c. Function (liberime-workable-p) should return non-nil."
+   c. Function (liberime-workable-p) should return non-nil.
+3. When liberime works, call (liberime-load) to load it."
   "The message which will be showed when `liberime-load' failure.")
 
 (defun liberime-get-user-data-dir ()
@@ -139,12 +140,13 @@
       (unless (featurep 'liberime-core)
         (load-file (liberime-get-module-file)))))
   (if (not (featurep 'liberime-core))
-      (let ((buf (get-buffer-create "*liberime message*")))
-        (with-current-buffer buf
-          (erase-buffer)
-          (insert liberime-message)
-          (goto-char (point-min)))
-        (pop-to-buffer buf))
+      (when (> (length liberime-message) 0)
+        (let ((buf (get-buffer-create "*liberime message*")))
+          (with-current-buffer buf
+            (erase-buffer)
+            (insert liberime-message)
+            (goto-char (point-min)))
+          (pop-to-buffer buf)))
     (liberime--start)))
 
 (liberime-load)

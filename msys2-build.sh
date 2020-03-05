@@ -15,7 +15,7 @@ PACKAGE_PREFIX="${MINGW_PACKAGE_PREFIX}"
 INSTALL_PREFIX="${MINGW_PREFIX}"
 
 # git 协议
-GIT_PROTOCOL="https"
+GIT_PROTOCOL="ssh"
 GIT_PROTOCOL_URL="https://github.com/"
 
 # job 数量

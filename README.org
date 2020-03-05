@@ -14,7 +14,7 @@ A emacs dynamic module provide librime bindings for emacs
 ** Build On Linux:
 #+NAME: build on linux
 #+BEGIN_SRC shell
-make liberime
+make liberime-core
 ls build/
 
 # try
@@ -30,7 +30,7 @@ make test
 3. Build just like on Linux
    #+NAME: build on osx
    #+BEGIN_SRC shell
-   make liberime
+   make liberime-core
    ls build/
 
    # try
@@ -61,6 +61,9 @@ make test
       1. the directory of emacs.exe
       2. /usr/local/bin
       3. /usr/bin
+6. When liberime-core.dll is loaded, rebuild it will not be
+   successful, for librime.dll has been opened.
+
 
 * Usage
 ** Initialize
