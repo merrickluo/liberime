@@ -29,6 +29,27 @@ RIME_ENABLE_LOG="OFF"
 
 INSTALL_SCHEMA=""
 
+function repeat() {
+    set +e
+    count=0
+    while [ 0 -eq 0 ]
+    do
+        echo "Run $@ ..."
+        $@
+        if [ $? -eq 0 ]; then
+            break;
+        else
+            count=$[${count}+1]
+            if [ ${count} -eq 20 ]; then
+                echo 'Timeout and exit.'
+                exit 1;
+            fi
+            echo "Retry ..."
+            sleep 3
+        fi
+    done
+    set -e
+}
 
 #######################################
 # 复制所有dll依赖到指定目录
@@ -84,7 +105,7 @@ function install_deps() {
 function build_leveldb() {
     echo "########## Build and install leveldb ##########"
     if [[ ! -d "leveldb" ]]; then
-        git clone --depth 1 "${GIT_PROTOCOL_URL}google/leveldb.git"
+        repeat git clone --depth 1 "${GIT_PROTOCOL_URL}google/leveldb.git"
     fi
     pushd leveldb
     cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DLEVELDB_BUILD_TESTS=OFF -DLEVELDB_BUILD_BENCHMARKS=OFF
@@ -96,7 +117,7 @@ function build_leveldb() {
 function build_marisa() {
     echo "########## Build and install marisa-tries ##########"
     if [[ ! -d "marisa-trie" ]]; then
-        git clone --depth 1 "${GIT_PROTOCOL_URL}s-yata/marisa-trie.git"
+       repeat git clone --depth 1 "${GIT_PROTOCOL_URL}s-yata/marisa-trie.git"
     fi
     pushd marisa-trie
     autoreconf -i
@@ -113,7 +134,7 @@ function build_marisa() {
 function build_opencc() {
     echo "########## Build and install opencc ##########"
     if [[ ! -d "OpenCC" ]]; then
-        git clone --depth 1 "${GIT_PROTOCOL_URL}BYVoid/OpenCC.git"
+       repeat git clone --depth 1 "${GIT_PROTOCOL_URL}BYVoid/OpenCC.git"
     fi
     pushd OpenCC
     cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DENABLE_GTEST=OFF -DBUILD_SHARED_LIBS=OFF
@@ -125,7 +146,7 @@ function build_opencc() {
 function build_librime() {
     echo "########## Build and install librime ##########"
     if [[ ! -d "librime" ]]; then
-        git clone  --depth 1 "${GIT_PROTOCOL_URL}rime/librime.git"
+       repeat git clone  --depth 1 "${GIT_PROTOCOL_URL}rime/librime.git"
     fi
     pushd librime
     cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DBUILD_TEST=OFF -DBOOST_USE_CXX11=ON -DBUILD_STATIC=ON -DENABLE_LOGGING="${RIME_ENABLE_LOG}" -DCMAKE_CXX_STANDARD_LIBRARIES="-lbcrypt"
@@ -141,7 +162,7 @@ function install_schema() {
     echo "########## Install librime schema ##########"
     local install_dir="$1"
     if [[ ! -d "plum" ]]; then
-        git clone --depth 1 "${GIT_PROTOCOL_URL}rime/plum.git"
+       repeat git clone --depth 1 "${GIT_PROTOCOL_URL}rime/plum.git"
     fi
     pushd plum
     rime_dir="${install_dir}" bash rime-install
