@@ -203,3 +203,4 @@ you should specify sync_dir in ~/.emacs.d/rime/installation.yaml
   (liberime-sync-user-data))
 
 (provide 'liberime)
+;;; liberime.el ends here
