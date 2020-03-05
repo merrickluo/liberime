@@ -7,6 +7,7 @@ liberime-core:
 
 clean:
 	rm -rf build
+	rm -rf third_party_build
 
 test: liberime-core
 	${EMACS} -Q -L build -L . test.el
