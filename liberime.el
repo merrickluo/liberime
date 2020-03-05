@@ -22,6 +22,12 @@
 
 (make-obsolete-variable 'after-liberime-load-hook 'liberime-after-start-hook "2019-12-13")
 
+(defun liberime-get-library-directory ()
+  "Return the liberime package direcory."
+  (file-name-directory
+   (or (locate-library "liberime")
+       (locate-library "liberime-config"))))
+
 (defcustom liberime-shared-data-dir
   ;; only guess on linux
   (cl-case system-type
@@ -36,7 +42,7 @@
     ('darwin
      "/Library/Input Methods/Squirrel.app/Contents/SharedSupport")
     ('windows-nt
-     (expand-file-name "build/data" liberime--root)))
+     (expand-file-name "build/data" (liberime-get-library-directory))))
   "Data directory on the system."
   :group 'liberime
   :type 'file)
@@ -47,11 +53,25 @@
   :group 'liberime
   :type 'file)
 
-(defun liberime-get-library-directory ()
-  "Return the liberime package direcory."
-  (file-name-directory
-   (or (locate-library "liberime")
-       (locate-library "liberime-config"))))
+(defvar liberime-message
+  "Liberime can not load properly, please check:
+1. Does your emacs support dynamic module?
+   a. Emacs should build with \"--with-modules\".
+   b. Variable `module-file-suffix' should return non-nil.
+2. Does liberime-core module compile and load properly?
+   a. User should install librime, gcc and cmake,
+      then build liberime-core module according to README.org,
+      Shortcut: (liberime-open-package-readme)
+   b. Linux user can try (liberime-build) shortcut function.
+   c. Function (liberime-workable-p) should return non-nil."
+  "The message which will be showed when `liberime-load' failure.")
+
+(defun liberime-get-user-data-dir ()
+  "Return user data directory, create it if necessary."
+  (let ((directory (expand-file-name liberime-user-data-dir)))
+    (unless (file-directory-p directory)
+      (make-directory directory))
+    directory))
 
 (defun liberime-open-directory (directory)
   "Open DIRECTORY with external app."
@@ -67,12 +87,17 @@
 (defun liberime-open-user-data-dir ()
   "Open user data dir with external app."
   (interactive)
-  (liberime-open-directory liberime-user-data-dir))
+  (liberime-open-directory (liberime-get-user-data-dir)))
 
 (defun liberime-open-package-directory ()
   "Open liberime library directory with external app."
   (interactive)
   (liberime-open-directory (liberime-get-library-directory)))
+
+(defun liberime-open-package-readme ()
+  "Open liberime library README.org."
+  (interactive)
+  (find-file (concat (liberime-get-library-directory) "README.org")))
 
 (defun liberime-get-module-file ()
   "Return the path of liberime-core file."
@@ -81,33 +106,45 @@
             "build/liberime-core"
             module-file-suffix)))
 
-(defun liberime--load()
-  (unless (featurep 'liberime-core)
-    (load-file (liberime-get-module-file)))
-  (unless (featurep 'liberime-core)
-    (t (error "cannot load librime-core module")))
-  (liberime--start))
-
 (defun liberime-build ()
   (interactive)
-  (let ((default-directory liberime--root))
+  (message "Liberime: start build liberime-core module ...")
+  (let ((default-directory (liberime-get-library-directory)))
     (set-process-sentinel
      (start-process "liberime-build" "*liberime build*" "make")
      (lambda (proc _event)
        (when (eq 'exit (process-status proc))
          (if (= 0 (process-exit-status proc))
-             (liberime--load)
+             (progn (liberime-load)
+                    (message "Liberime: load liberime-core module successful."))
            (pop-to-buffer "*liberime build*")
            (error "liberime: building failed with exit code %d" (process-exit-status proc))))))))
 
-(defun liberime--start ()
-  (unless (or (and liberime-shared-data-dir
-                   (file-directory-p liberime-shared-data-dir))
-              (and liberime-user-data-dir
-                   (file-directory-p liberime-user-data-dir)))
-    (user-error "Please set liberime-shared-data-dir or liberime-user-data-dir"))
-  (liberime-start liberime-shared-data-dir liberime-user-data-dir)
-  (run-hooks 'liberime-after-start-hook))
+(defun liberime-workable-p ()
+  "Return non-nil when liberime can work."
+  (and module-file-suffix
+       (file-exists-p (liberime-get-module-file))
+       (featurep 'liberime-core)))
+
+;;;###autoload
+(defun liberime-load ()
+  (interactive)
+  (ignore-errors
+    (when (and module-file-suffix
+               (file-exists-p (liberime-get-module-file)))
+      (unless (featurep 'liberime-core)
+        (load-file (liberime-get-module-file)))))
+  (if (not (featurep 'liberime-core))
+      (let ((buf (get-buffer-create "*liberime message*")))
+        (with-current-buffer buf
+          (erase-buffer)
+          (insert liberime-message)
+          (goto-char (point-min)))
+        (pop-to-buffer buf))
+    (liberime-start liberime-shared-data-dir (liberime-get-user-data-dir))
+    (run-hooks 'liberime-after-start-hook)))
+
+(liberime-load)
 
 (defun liberime-get-preedit ()
   "Get rime preedit."
@@ -164,17 +201,5 @@ you should specify sync_dir in ~/.emacs.d/rime/installation.yaml
 "
   (interactive)
   (liberime-sync-user-data))
-
-;;;###autoload
-(defun liberime-load ()
-  (interactive)
-  (unless module-file-suffix
-    (error "Module support not detected, liberime can't work"))
-  (cond
-   ((file-exists-p (liberime-get-module-file)) (liberime--load))
-   ((y-or-n-p "liberime-core must be built, do so now?") (liberime-build))
-   (t (error "liberime-core not loaded"))))
-
-(liberime-load)
 
 (provide 'liberime)
