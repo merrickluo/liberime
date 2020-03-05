@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #include "interface.h"
-#include "liberime.h"
+#include "liberime-core.h"
 
 /**
  * Macro that defines a docstring for a function.

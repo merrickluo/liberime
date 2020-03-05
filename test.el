@@ -6,7 +6,7 @@
        ,@body
        (- (float-time) ,start))))
 
-(require 'liberime)
+(require 'liberime-core)
 ;; darwin
 (setq rime-data-dir "/Library/Input Methods/Squirrel.app/Contents/SharedSupport")
 ;; linux
