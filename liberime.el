@@ -15,12 +15,6 @@
 (require 'nadvice)
 (require 'cl-lib)
 
-(defvar liberime--root
-  (file-name-directory (or load-file-name buffer-file-name)))
-
-(defvar liberime--module-file
-  (concat liberime--root "build/liberime-core" module-file-suffix))
-
 (defcustom liberime-after-start-hook nil
   "List of functions to be called after liberime start"
   :group 'liberime
@@ -53,9 +47,22 @@
   :group 'liberime
   :type 'file)
 
+(defun liberime-get-library-directory ()
+  "Return the liberime package direcory."
+  (file-name-directory
+   (or (locate-library "liberime")
+       (locate-library "liberime-config"))))
+
+(defun liberime-get-module-file ()
+  "Return the path of liberime-core file."
+  (when (liberime-get-library-directory)
+    (concat (liberime-get-library-directory)
+            "build/liberime-core"
+            module-file-suffix)))
+
 (defun liberime--load()
   (unless (featurep 'liberime-core)
-    (load-file liberime--module-file))
+    (load-file (liberime-get-module-file)))
   (unless (featurep 'liberime-core)
     (t (error "cannot load librime-core module")))
   (liberime--start))
@@ -143,7 +150,7 @@ you should specify sync_dir in ~/.emacs.d/rime/installation.yaml
   (unless module-file-suffix
     (error "Module support not detected, liberime can't work"))
   (cond
-   ((file-exists-p liberime--module-file) (liberime--load))
+   ((file-exists-p (liberime-get-module-file)) (liberime--load))
    ((y-or-n-p "liberime-core must be built, do so now?") (liberime-build))
    (t (error "liberime-core not loaded"))))
 
