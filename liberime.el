@@ -78,7 +78,9 @@ if NAMES is nil, \"rime-data\" as fallback."
          (liberime-find-rime-data
           '("c:/" "d:/" "e:/" "f:/" "g:/")
           '("msys32/mingw32/share/rime-data"
-            "msys64/mingw64/share/rime-data"))))))
+            "msys64/mingw64/share/rime-data"))))
+      ;; Fallback to user data dir.
+      (liberime-get-user-data-dir)))
 
 (defun liberime-get-user-data-dir ()
   "Return user data directory, create it if necessary."
