@@ -151,9 +151,11 @@ if NAMES is nil, \"rime-data\" as fallback."
        (featurep 'liberime-core)))
 
 (defun liberime--start ()
-  (liberime-start (liberime-get-shared-data-dir)
-                  (liberime-get-user-data-dir))
-  (run-hooks 'liberime-after-start-hook))
+  (let ((shared-dir (liberime-get-shared-data-dir))
+        (user-dir (liberime-get-user-data-dir)))
+    (message "Liberime: start with shared dir %S, user dir: %S" shared-dir user-dir)
+    (liberime-start shared-dir user-dir)
+    (run-hooks 'liberime-after-start-hook)))
 
 ;;;###autoload
 (defun liberime-load ()
