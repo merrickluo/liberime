@@ -253,6 +253,9 @@ function archive_liberime() {
     mkdir -p ${temp_rime_data_dir}
     cp -r "${RIME_DATA_DIR}"/* ${temp_rime_data_dir}
     
+    ## 复制 README.txt
+    cp README-archive.txt ${temp_dir}/README.txt
+
     ## 压缩
     if [[ -f "${zip_file}" ]]; then
         rm -rf "${zip_file}"
