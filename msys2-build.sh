@@ -228,7 +228,7 @@ function build_liberime() {
 # 打包liberime
 function archive_liberime() {
     echo ""
-    echo "########## Archive librime ##########"
+    echo "########## Archive liberime ##########"
     local temp_dir="${ARCHIVE_DIR}/temp"
     local temp_bin_dir="${ARCHIVE_DIR}/temp/bin"
     local temp_site_lisp_dir="${ARCHIVE_DIR}/temp/share/emacs/site-lisp"
