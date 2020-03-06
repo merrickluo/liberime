@@ -231,17 +231,17 @@ function archive_liberime() {
     echo "########## Archive librime ##########"
     local temp_dir="${ARCHIVE_DIR}/temp"
     local temp_bin_dir="${ARCHIVE_DIR}/temp/bin"
-    local temp_data_dir="${ARCHIVE_DIR}/temp/share/rime-data"
+    local temp_site_lisp_dir="${ARCHIVE_DIR}/temp/share/emacs/site-lisp"
+    local temp_rime_data_dir="${ARCHIVE_DIR}/temp/share/rime-data"
     local zip_file="${ARCHIVE_DIR}/liberime-archive.zip"
     if [[ -d "${ARCHIVE_DIR}" ]]; then
         rm -rf "${ARCHIVE_DIR}"
     fi
 
-    ## 复制 el 和 README 文件
-    mkdir -p ${temp_dir}
-    cp liberime.el ${temp_dir}
-    cp liberime-config.el ${temp_dir}
-    cp README.org ${temp_dir}
+    ## 复制 el 文件
+    mkdir -p ${temp_site_lisp_dir}
+    cp liberime.el ${temp_site_lisp_dir}
+    cp liberime-config.el ${temp_site_lisp_dir}
 
     ## 复制 liberime-core.dll 和它的所有依赖
     mkdir -p ${temp_bin_dir} 
@@ -250,8 +250,8 @@ function archive_liberime() {
     copy_all_dll "${temp_bin_dir}/librime.dll" ${temp_bin_dir} "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
 
     ## 复制 rime-data
-    mkdir -p ${temp_data_dir} 
-    cp -r "${RIME_DATA_DIR}"/* ${temp_data_dir}
+    mkdir -p ${temp_rime_data_dir}
+    cp -r "${RIME_DATA_DIR}"/* ${temp_rime_data_dir}
     
     ## 压缩
     if [[ -f "${zip_file}" ]]; then
