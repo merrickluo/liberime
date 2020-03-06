@@ -76,8 +76,13 @@ if NAMES is nil, \"rime-data\" as fallback."
          "/Library/Input Methods/Squirrel.app/Contents/SharedSupport")
         ('windows-nt
          (liberime-find-rime-data
-          '("c:/" "d:/" "e:/" "f:/" "g:/")
-          '("msys32/mingw32/share/rime-data"
+          (list
+           (expand-file-name
+            (concat (file-name-directory (executable-find "emacs"))
+                    "../share"))
+           "c:/" "d:/" "e:/" "f:/" "g:/")
+          '("rime-data"
+            "msys32/mingw32/share/rime-data"
             "msys64/mingw64/share/rime-data"))))
       ;; Fallback to user data dir.
       (liberime-get-user-data-dir)))
