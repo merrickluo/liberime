@@ -40,7 +40,7 @@
    a. User should install librime, gcc and cmake,
       then build liberime-core module according to README.org,
       Shortcut: (liberime-open-package-readme)
-   b. Linux user can try (liberime-build) shortcut function.
+   b. User can try (liberime-build) shortcut function.
    c. Function (liberime-workable-p) should return non-nil.
 3. When liberime works, call (liberime-load) to load it."
   "The message which will be showed when `liberime-load' failure.")

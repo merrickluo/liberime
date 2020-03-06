@@ -214,6 +214,10 @@ function build_liberime() {
     echo ""
     echo "########## Build and install liberime ##########"
 
+    ## 删除 liberime-core.dll, 不然重新编译的时候，可能会导致 ld.exe 报类似：
+    ## "cannot open output file liberime-core.dll: Permission denied " 的错误。
+    rm -f build/liberime-core.dll
+
     cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}"
     cmake --build build --config Release -j ${JOB_NUMBER}
     
