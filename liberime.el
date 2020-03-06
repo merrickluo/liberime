@@ -11,8 +11,6 @@
 ;; load liberime by default
 
 ;;; Code:
-
-(require 'nadvice)
 (require 'cl-lib)
 
 (defcustom liberime-after-start-hook nil
