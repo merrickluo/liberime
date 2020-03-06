@@ -61,9 +61,6 @@ make test
       1. the directory of emacs.exe
       2. /usr/local/bin
       3. /usr/bin
-6. When liberime-core.dll is loaded, rebuild it will not be
-   successful, for librime.dll has been opened.
-
 
 * Usage
 ** Initialize
