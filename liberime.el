@@ -22,27 +22,7 @@
 
 (make-obsolete-variable 'after-liberime-load-hook 'liberime-after-start-hook "2019-12-13")
 
-(defun liberime-get-library-directory ()
-  "Return the liberime package direcory."
-  (file-name-directory
-   (or (locate-library "liberime")
-       (locate-library "liberime-config"))))
-
-(defcustom liberime-shared-data-dir
-  ;; only guess on linux
-  (cl-case system-type
-    ('gnu/linux
-     (cl-some (lambda (parent)
-                (let ((dir (expand-file-name "rime-data" parent)))
-                  (when (file-directory-p dir)
-                    dir)))
-              (if (fboundp 'xdg-data-dirs)
-                  (xdg-data-dirs)
-                '("/usr/share/local" "/usr/share"))))
-    ('darwin
-     "/Library/Input Methods/Squirrel.app/Contents/SharedSupport")
-    ('windows-nt
-     (expand-file-name "build/data" (liberime-get-library-directory))))
+(defcustom liberime-shared-data-dir nil
   "Data directory on the system."
   :group 'liberime
   :type 'file)
@@ -67,6 +47,41 @@
 3. When liberime works, call (liberime-load) to load it."
   "The message which will be showed when `liberime-load' failure.")
 
+(defun liberime-get-library-directory ()
+  "Return the liberime package direcory."
+  (file-name-directory
+   (or (locate-library "liberime")
+       (locate-library "liberime-config"))))
+
+(defun liberime-find-rime-data (parent-dirs &optional names)
+  "Find directories listed in NAMES from PARENT-DIRS,
+if NAMES is nil, \"rime-data\" as fallback."
+  (cl-some (lambda (parent)
+             (cl-some (lambda (name)
+                        (let ((dir (concat (file-name-as-directory parent) name)))
+                          (when (file-directory-p dir)
+                            dir)))
+                      (or names '("rime-data"))))
+           (if (fboundp 'xdg-data-dirs)
+               `(,@parent-dirs ,@(xdg-data-dirs))
+             parent-dirs)))
+
+(defun liberime-get-shared-data-dir ()
+  "Return user data directory"
+  (or liberime-shared-data-dir
+      ;; Guess
+      (cl-case system-type
+        ('gnu/linux
+         (liberime-find-rime-data
+          '("/usr/share/local" "/usr/share")))
+        ('darwin
+         "/Library/Input Methods/Squirrel.app/Contents/SharedSupport")
+        ('windows-nt
+         (liberime-find-rime-data
+          '("c:/" "d:/" "e:/" "f:/" "g:/")
+          '("msys32/mingw32/share/rime-data"
+            "msys64/mingw64/share/rime-data"))))))
+
 (defun liberime-get-user-data-dir ()
   "Return user data directory, create it if necessary."
   (let ((directory (expand-file-name liberime-user-data-dir)))
@@ -77,18 +92,24 @@
 (defun liberime-open-directory (directory)
   "Open DIRECTORY with external app."
   (let ((directory (expand-file-name directory)))
-    (cond ((string-equal system-type "windows-nt")
-           (w32-shell-execute "open" directory))
-          ((string-equal system-type "darwin")
-           (concat "open " (shell-quote-argument directory)))
-          ((string-equal system-type "gnu/linux")
-           (let ((process-connection-type nil))
-             (start-process "" nil "xdg-open" directory))))))
+    (when (file-directory-p directory)
+      (cond ((string-equal system-type "windows-nt")
+             (w32-shell-execute "open" directory))
+            ((string-equal system-type "darwin")
+             (concat "open " (shell-quote-argument directory)))
+            ((string-equal system-type "gnu/linux")
+             (let ((process-connection-type nil))
+               (start-process "" nil "xdg-open" directory)))))))
 
 (defun liberime-open-user-data-dir ()
   "Open user data dir with external app."
   (interactive)
   (liberime-open-directory (liberime-get-user-data-dir)))
+
+(defun liberime-open-shared-data-dir ()
+  "Open shared data dir with external app."
+  (interactive)
+  (liberime-open-directory (liberime-get-shared-data-dir)))
 
 (defun liberime-open-package-directory ()
   "Open liberime library directory with external app."
@@ -102,10 +123,14 @@
 
 (defun liberime-get-module-file ()
   "Return the path of liberime-core file."
-  (when (liberime-get-library-directory)
-    (concat (liberime-get-library-directory)
-            "build/liberime-core"
-            module-file-suffix)))
+  (let ((file (concat (liberime-get-library-directory)
+                      "build/liberime-core"
+                      module-file-suffix)))
+    (or (when (file-exists-p file) file)
+        (locate-library "liberime-core")
+        (locate-file
+         (concat "liberime-core" module-file-suffix)
+         exec-path))))
 
 (defun liberime-build ()
   (interactive)
@@ -124,11 +149,12 @@
 (defun liberime-workable-p ()
   "Return non-nil when liberime can work."
   (and module-file-suffix
-       (file-exists-p (liberime-get-module-file))
+       (liberime-get-module-file)
        (featurep 'liberime-core)))
 
 (defun liberime--start ()
-  (liberime-start liberime-shared-data-dir (liberime-get-user-data-dir))
+  (liberime-start (liberime-get-shared-data-dir)
+                  (liberime-get-user-data-dir))
   (run-hooks 'liberime-after-start-hook))
 
 ;;;###autoload
@@ -136,7 +162,7 @@
   (interactive)
   (ignore-errors
     (when (and module-file-suffix
-               (file-exists-p (liberime-get-module-file)))
+               (liberime-get-module-file))
       (unless (featurep 'liberime-core)
         (load-file (liberime-get-module-file)))))
   (if (not (featurep 'liberime-core))

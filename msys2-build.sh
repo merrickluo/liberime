@@ -18,19 +18,23 @@ INSTALL_PREFIX="${MINGW_PREFIX}"
 GIT_PROTOCOL="ssh"
 GIT_PROTOCOL_URL="https://github.com/"
 
+# 重新编译所有
+REBUILD_ALL=""
+
 # job 数量
 JOB_NUMBER=1
 
 # 激活 rime log
 RIME_ENABLE_LOG="OFF"
 
-INSTALL_SCHEMA=""
-
+# rime-data
+RIME_DATA_DIR="${MINGW_PREFIX}/share/rime-data"
+INSTALL_PLUM=""
 
 # Archive
 ARCHIVE_DIR="/d/liberime-archive"
 
-function repeat() {
+function repeatcmd() {
     set +e
     count=0
     while [ 0 -eq 0 ]
@@ -41,7 +45,7 @@ function repeat() {
             break;
         else
             count=$[${count}+1]
-            if [ ${count} -eq 20 ]; then
+            if [ ${count} -eq 50 ]; then
                 echo 'Timeout and exit.'
                 exit 1;
             fi
@@ -88,6 +92,7 @@ function copy_all_dll() {
 
 # 安装依赖
 function install_deps() {
+    echo ""
     echo "########## Install build dependences ##########"
     local dep_packages=(
         base-devel
@@ -104,9 +109,10 @@ function install_deps() {
 
 # 编译 leveldb
 function build_leveldb() {
+    echo ""
     echo "########## Build and install leveldb ##########"
     if [[ ! -d "leveldb" ]]; then
-        repeat git clone --depth 1 "${GIT_PROTOCOL_URL}google/leveldb.git"
+        repeatcmd git clone --depth 1 "${GIT_PROTOCOL_URL}google/leveldb.git"
     fi
     pushd leveldb
     cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DLEVELDB_BUILD_TESTS=OFF -DLEVELDB_BUILD_BENCHMARKS=OFF
@@ -116,9 +122,10 @@ function build_leveldb() {
 
 # 编译 marisa
 function build_marisa() {
+    echo ""
     echo "########## Build and install marisa-tries ##########"
     if [[ ! -d "marisa-trie" ]]; then
-       repeat git clone --depth 1 "${GIT_PROTOCOL_URL}s-yata/marisa-trie.git"
+        repeatcmd git clone --depth 1 "${GIT_PROTOCOL_URL}s-yata/marisa-trie.git"
     fi
     pushd marisa-trie
     autoreconf -i
@@ -133,9 +140,10 @@ function build_marisa() {
 
 # 编译 OpenCC
 function build_opencc() {
+    echo ""
     echo "########## Build and install opencc ##########"
     if [[ ! -d "OpenCC" ]]; then
-       repeat git clone --depth 1 "${GIT_PROTOCOL_URL}BYVoid/OpenCC.git"
+        repeatcmd git clone --depth 1 "${GIT_PROTOCOL_URL}BYVoid/OpenCC.git"
     fi
     pushd OpenCC
     cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DENABLE_GTEST=OFF -DBUILD_SHARED_LIBS=OFF
@@ -145,34 +153,53 @@ function build_opencc() {
 
 # 编译 librime
 function build_librime() {
+    echo ""
     echo "########## Build and install librime ##########"
     if [[ ! -d "librime" ]]; then
-       repeat git clone  --depth 1 "${GIT_PROTOCOL_URL}rime/librime.git"
+        repeatcmd git clone  --depth 1 "${GIT_PROTOCOL_URL}rime/librime.git"
     fi
     pushd librime
     cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DBUILD_TEST=OFF -DBOOST_USE_CXX11=ON -DBUILD_STATIC=ON -DENABLE_LOGGING="${RIME_ENABLE_LOG}" -DCMAKE_CXX_STANDARD_LIBRARIES="-lbcrypt"
     cmake --build build --config Release --target install -j ${JOB_NUMBER}
     # liberime 通过 PATH 环境变量寻找 librime.dll, 将 librime.dll 复制到 bin, 就
     # 不需要用户自己设置 PATH 环境变量了。
-    cp "${INSTALL_PREFIX}/lib/librime.dll" "${INSTALL_PREFIX}/bin/"
+    cp -f "${INSTALL_PREFIX}/lib/librime.dll" "${INSTALL_PREFIX}/bin/"
     popd
 }
 
-# 用 plum 安裝 schema
-function install_schema() {
-    echo "########## Install librime schema ##########"
-    local install_dir="$1"
-    if [[ ! -d "plum" ]]; then
-       repeat git clone --depth 1 "${GIT_PROTOCOL_URL}rime/plum.git"
+# 安装 rime-data
+function install_rime_data() {
+    echo ""
+    echo "########## Install rime data ##########"
+
+    rm -rf $RIME_DATA_DIR
+    mkdir -p "$RIME_DATA_DIR"/opencc
+    cp -r "${INSTALL_PREFIX}/share/opencc" "$RIME_DATA_DIR"/
+
+    if [[ -n "${INSTALL_PLUM}" ]]; then
+        echo ""
+        echo "########## install plum schema ##########"
+        if [[ ! -d "plum" ]]; then
+            repeatcmd git clone --depth 1 "${GIT_PROTOCOL_URL}rime/plum.git"
+        fi
+        rime_dir="$PWD/plum-rime-data"
+        rm -rf ${rime_dir}
+        mkdir -p ${rime_dir}
+        pushd plum
+        repeatcmd bash rime-install
+        cp ${rime_dir}/* $RIME_DATA_DIR
+        popd
+
+    else
+        cp -r librime/data/minimal/* "$RIME_DATA_DIR"
     fi
-    pushd plum
-    rime_dir="${install_dir}" bash rime-install
-    popd
 }
 
 # 编译 liberime
 function build_liberime() {
-    if [[ ! -f "build/librime.dll" ]]; then
+    if [[ ! -n "${REBUILD_ALL}" ]] && [[ -f "${INSTALL_PREFIX}/lib/librime.dll" ]]; then
+        echo "Note: ONLY rebuild liberime-core, Use --rebuildall to build all dependences."
+    else
         install_deps
         if [[ ! -d "third_party_build" ]]; then
             mkdir third_party_build
@@ -183,54 +210,47 @@ function build_liberime() {
         build_marisa
         build_opencc
         build_librime
+        install_rime_data
         popd
-    else
-        echo "Note: Do not build leveldb, marise, opencc and librime,"
-        echo "Note: Remove ./build and ./third_party_build directory to rebuild them."
     fi
-    
+
+    echo ""
     echo "########## Build and install liberime ##########"
 
     cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}"
     cmake --build build --config Release -j ${JOB_NUMBER}
     
-    # 复制非系统依赖
-    cp "${INSTALL_PREFIX}/lib/librime.dll" build
-    strip build/librime.dll
-    copy_all_dll "build/librime.dll" build "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
-
-    ## 复制 opencc 词典
-    mkdir -p build/data
-    cp -r "${INSTALL_PREFIX}/share/opencc" "build/data/"
-
-    # 安裝 schema
-    cp -r third_party_build/librime/data/minimal/* "build/data/"
-    
     echo ""
-    echo "Build Finished!!!"
+    echo "Build liberime Finished!!!"
 }
 
 # 打包liberime
 function archive_liberime() {
+    echo ""
     echo "########## Archive librime ##########"
     local temp_dir="${ARCHIVE_DIR}/temp"
-    local temp_data_dir="${ARCHIVE_DIR}/temp/build"
+    local temp_bin_dir="${ARCHIVE_DIR}/temp/bin"
+    local temp_data_dir="${ARCHIVE_DIR}/temp/share/rime-data"
     local zip_file="${ARCHIVE_DIR}/liberime-archive.zip"
     if [[ -d "${ARCHIVE_DIR}" ]]; then
         rm -rf "${ARCHIVE_DIR}"
     fi
 
-    mkdir -p ${temp_data_dir} 
+    ## 复制 el 和 README 文件
+    mkdir -p ${temp_dir}
     cp liberime.el ${temp_dir}
     cp liberime-config.el ${temp_dir}
     cp README.org ${temp_dir}
 
+    ## 复制 liberime-core.dll 和它的所有依赖
+    mkdir -p ${temp_bin_dir} 
+    cp build/liberime-core.dll ${temp_bin_dir}
+    cp "${INSTALL_PREFIX}/lib/librime.dll" ${temp_bin_dir}
+    copy_all_dll "${temp_bin_dir}/librime.dll" ${temp_bin_dir} "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
+
+    ## 复制 rime-data
     mkdir -p ${temp_data_dir} 
-    cp build/liberime-core.dll ${temp_data_dir}
-    cp -r build/data ${temp_data_dir}
-    cp "${INSTALL_PREFIX}/lib/librime.dll" ${temp_data_dir}
-    ## 复制 librime.dll 的所有依赖
-    copy_all_dll "${temp_data_dir}/librime.dll" ${temp_data_dir} "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
+    cp -r "${RIME_DATA_DIR}"/* ${temp_data_dir}
     
     ## 压缩
     if [[ -f "${zip_file}" ]]; then
@@ -251,6 +271,7 @@ function display_usage() {
 
 选项:
 
+    -r, --rebuildall            是否重新编译所有库
     -a, --archive=FILENAME      打包 dll 依赖, opencc 词典, 默认的 scheme 到一个 FILENAME.zip 文件
 
     -p, --protocol=PROTOCOL     git clone 时用到的协议，https 或者 ssh 
@@ -274,12 +295,16 @@ function main() {
                 display_usage;
                 exit 0
                 ;;
+            -r|--rebuildall)
+                REBUILD_ALL="TRUE"
+                shift
+                ;;
             -l|--log)
                 RIME_ENABLE_LOG="ON"
                 shift
                 ;;
-            -s|--schema)
-                INSTALL_SCHEMA="TRUE"
+            -m|--plum)
+                INSTALL_PLUM="TRUE"
                 shift
                 ;;
             -p|--protocol)
@@ -310,18 +335,12 @@ function main() {
     fi
 
     build_liberime
-
     archive_liberime
-
-    if [[ -n "${INSTALL_SCHEMA}" ]]; then
-        echo "install schema to ./build/data"
-        install_schema "build/data"
-    fi
 
 }
 
 # 选项
-ARGS=$(getopt -o hlsa:p:j: --long help,log,schema,archive:,protocol:,job: -n "$0" -- "$@")
+ARGS=$(getopt -o rhlma:p:j: --long rebuildall,help,log,plum,archive:,protocol:,job: -n "$0" -- "$@")
 
 
 if [[ $? != 0 ]]; then
