@@ -21,9 +21,6 @@ GIT_PROTOCOL_URL="https://github.com/"
 # job 数量
 JOB_NUMBER=1
 
-# archive 名字
-ARCHIVE_NAME=""
-
 # 激活 rime log
 RIME_ENABLE_LOG="OFF"
 
