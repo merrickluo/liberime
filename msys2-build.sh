@@ -182,12 +182,9 @@ function install_rime_data() {
         if [[ ! -d "plum" ]]; then
             repeatcmd git clone --depth 1 "${GIT_PROTOCOL_URL}rime/plum.git"
         fi
-        rime_dir="$PWD/plum-rime-data"
-        rm -rf ${rime_dir}
-        mkdir -p ${rime_dir}
         pushd plum
+        export rime_dir="$RIME_DATA_DIR"
         repeatcmd bash rime-install
-        cp ${rime_dir}/* $RIME_DATA_DIR
         popd
 
     else
