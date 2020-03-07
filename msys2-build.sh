@@ -228,7 +228,7 @@ function build_liberime() {
 # 打包liberime
 function archive_liberime() {
     echo ""
-    echo "########## Archive librime ##########"
+    echo "########## Archive liberime ##########"
     local temp_dir="${ARCHIVE_DIR}/temp"
     local temp_bin_dir="${ARCHIVE_DIR}/temp/bin"
     local temp_site_lisp_dir="${ARCHIVE_DIR}/temp/share/emacs/site-lisp"
@@ -253,6 +253,9 @@ function archive_liberime() {
     mkdir -p ${temp_rime_data_dir}
     cp -r "${RIME_DATA_DIR}"/* ${temp_rime_data_dir}
     
+    ## 复制 README.txt
+    cp README-archive.txt ${temp_dir}/README.txt
+
     ## 压缩
     if [[ -f "${zip_file}" ]]; then
         rm -rf "${zip_file}"

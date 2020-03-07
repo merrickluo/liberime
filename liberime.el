@@ -128,10 +128,15 @@ if NAMES is nil, \"rime-data\" as fallback."
 
 (defun liberime-get-module-file ()
   "Return the path of liberime-core file."
-  (let ((file (concat (liberime-get-library-directory)
-                      "build/liberime-core"
-                      module-file-suffix)))
-    (or (when (file-exists-p file) file)
+  (let ((file1 (concat (liberime-get-library-directory)
+                       "build/liberime-core"
+                       module-file-suffix))
+        (file2 (concat (file-name-directory
+                        (or (executable-find "emacs")
+                            "/usr/bin/emacs"))
+                       "liberime-core" module-file-suffix)))
+    (or (when (file-exists-p file1) file1)
+        (when (file-exists-p file2) file2)
         (locate-library "liberime-core")
         (locate-file
          (concat "liberime-core" module-file-suffix)
