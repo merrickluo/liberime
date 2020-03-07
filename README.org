@@ -38,29 +38,26 @@ make test
    #+END_SRC
 
 ** Build On Windows (Msys2)
-1. Open msys2 terminal
-2. cd liberime directory
-3. User can run =./msys2-build.sh --help= for help message
-4. Build with =msys2-build.sh=
+1. 打开 MSYS2 MinGW 终端
+2. 切换到 liberime 所在的目录
+3. 运行下面的命令
 
    #+BEGIN_SRC shell
    ./msys2-build.sh
    #+END_SRC
 
-5. If user load liberime failure, please check and make sure
-   liberime can find librime.dll.
-   1. Method 1: Add =/path/to/liberime/build= directory to the
-      environment variable *PATH*, user can add the below line to
-      msys2 ~/.bashrc file.
-      
-      #+BEGIN_SRC shell
-      export PATH=$PATH:/path/to/liberime/build
-      #+END_SRC
+4. =./msys2-build.sh= 命令有许多选项，可以使用下面的命令获取帮助
 
-   2. Method 2: copy librime.dll to one of the directories.
-      1. the directory of emacs.exe
-      2. /usr/local/bin
-      3. /usr/bin
+   #+BEGIN_SRC shell
+   ./msys2-build.sh --help
+   #+END_SRC
+
+注意事项：=liberime-core.dll= 加载有时候会报错，遇到这种情况，首先应该
+检查环境变量 =PATH= 的设置，确保 =librime.dll= 可以通过 PATH 找到。
+
+如果用户不想自己编译，可以从 release 区下载 liberime-archive 预编译包
+尝鲜，预编译包主要用于测试，还是建议用户直接使用msys2-build 编译安
+装。
 
 * Usage
 ** Initialize
