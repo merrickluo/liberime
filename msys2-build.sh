@@ -223,8 +223,7 @@ function build_liberime() {
 # 打包liberime
 function archive_liberime() {
     echo ""
-<<<<<<< HEAD
-    echo "########## Archive librime ##########"
+    echo "########## Archive liberime ##########"
 
     local zip_file
     if [[ -n "${TRAVIS_ARCHIVE_NAME}" ]]; then
@@ -236,15 +235,8 @@ function archive_liberime() {
 
     local temp_dir="${ARCHIVE_DIR}/temp"
     local temp_bin_dir="${ARCHIVE_DIR}/temp/bin"
-    local temp_data_dir="${ARCHIVE_DIR}/temp/share/rime-data"
-=======
-    echo "########## Archive liberime ##########"
-    local temp_dir="${ARCHIVE_DIR}/temp"
-    local temp_bin_dir="${ARCHIVE_DIR}/temp/bin"
     local temp_site_lisp_dir="${ARCHIVE_DIR}/temp/share/emacs/site-lisp"
     local temp_rime_data_dir="${ARCHIVE_DIR}/temp/share/rime-data"
-    local zip_file="${ARCHIVE_DIR}/liberime-archive.zip"
->>>>>>> master
     if [[ -d "${ARCHIVE_DIR}" ]]; then
         rm -rf "${ARCHIVE_DIR}"
     fi
