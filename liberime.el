@@ -106,21 +106,25 @@ if NAMES is nil, \"rime-data\" as fallback."
              (let ((process-connection-type nil))
                (start-process "" nil "xdg-open" directory)))))))
 
+;;;###autoload
 (defun liberime-open-user-data-dir ()
   "Open user data dir with external app."
   (interactive)
   (liberime-open-directory (liberime-get-user-data-dir)))
 
+;;;###autoload
 (defun liberime-open-shared-data-dir ()
   "Open shared data dir with external app."
   (interactive)
   (liberime-open-directory (liberime-get-shared-data-dir)))
 
+;;;###autoload
 (defun liberime-open-package-directory ()
   "Open liberime library directory with external app."
   (interactive)
   (liberime-open-directory (liberime-get-library-directory)))
 
+;;;###autoload
 (defun liberime-open-package-readme ()
   "Open liberime library README.org."
   (interactive)
@@ -142,6 +146,7 @@ if NAMES is nil, \"rime-data\" as fallback."
          (concat "liberime-core" module-file-suffix)
          exec-path))))
 
+;;;###autoload
 (defun liberime-build ()
   (interactive)
   (message "Liberime: start build liberime-core module ...")
@@ -223,12 +228,14 @@ this function will go to proper page then select a candidate."
   ;; NEED IMPROVE: Second run `liberime-get-commit' will clear commit.
   (liberime-get-commit))
 
+;;;###autoload
 (defun liberime-deploy()
   "deploy liberime to affect config file change"
   (interactive)
   (liberime-finalize)
   (liberime--start))
 
+;;;###autoload
 (defun liberime-set-page-size (page-size)
   "set rime page-size to `prefix' or by default 100
 example C-u 200 M-x liberime-set-page-size
@@ -254,6 +261,7 @@ you only need to do this once.
           (message "Liberime: select %s schema." schema-name))
       (message "Liberime: schema %S is not found, ignore." schema))))
 
+;;;###autoload
 (defun liberime-sync ()
   "sync rime user data
 you should specify sync_dir in ~/.emacs.d/rime/installation.yaml
