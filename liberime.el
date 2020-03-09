@@ -76,9 +76,16 @@ if NAMES is nil, \"rime-data\" as fallback."
          "/Library/Input Methods/Squirrel.app/Contents/SharedSupport")
         ('windows-nt
          (liberime-find-rime-data
-          '("c:/" "d:/" "e:/" "f:/" "g:/")
-          '("msys32/mingw32/share/rime-data"
-            "msys64/mingw64/share/rime-data"))))))
+          (list
+           (expand-file-name
+            (concat (file-name-directory (executable-find "emacs"))
+                    "../share"))
+           "c:/" "d:/" "e:/" "f:/" "g:/")
+          '("rime-data"
+            "msys32/mingw32/share/rime-data"
+            "msys64/mingw64/share/rime-data"))))
+      ;; Fallback to user data dir.
+      (liberime-get-user-data-dir)))
 
 (defun liberime-get-user-data-dir ()
   "Return user data directory, create it if necessary."
@@ -99,21 +106,25 @@ if NAMES is nil, \"rime-data\" as fallback."
              (let ((process-connection-type nil))
                (start-process "" nil "xdg-open" directory)))))))
 
+;;;###autoload
 (defun liberime-open-user-data-dir ()
   "Open user data dir with external app."
   (interactive)
   (liberime-open-directory (liberime-get-user-data-dir)))
 
+;;;###autoload
 (defun liberime-open-shared-data-dir ()
   "Open shared data dir with external app."
   (interactive)
   (liberime-open-directory (liberime-get-shared-data-dir)))
 
+;;;###autoload
 (defun liberime-open-package-directory ()
   "Open liberime library directory with external app."
   (interactive)
   (liberime-open-directory (liberime-get-library-directory)))
 
+;;;###autoload
 (defun liberime-open-package-readme ()
   "Open liberime library README.org."
   (interactive)
@@ -121,15 +132,21 @@ if NAMES is nil, \"rime-data\" as fallback."
 
 (defun liberime-get-module-file ()
   "Return the path of liberime-core file."
-  (let ((file (concat (liberime-get-library-directory)
-                      "build/liberime-core"
-                      module-file-suffix)))
-    (or (when (file-exists-p file) file)
+  (let ((file1 (concat (liberime-get-library-directory)
+                       "build/liberime-core"
+                       module-file-suffix))
+        (file2 (concat (file-name-directory
+                        (or (executable-find "emacs")
+                            "/usr/bin/emacs"))
+                       "liberime-core" module-file-suffix)))
+    (or (when (file-exists-p file1) file1)
+        (when (file-exists-p file2) file2)
         (locate-library "liberime-core")
         (locate-file
          (concat "liberime-core" module-file-suffix)
          exec-path))))
 
+;;;###autoload
 (defun liberime-build ()
   (interactive)
   (message "Liberime: start build liberime-core module ...")
@@ -211,12 +228,14 @@ this function will go to proper page then select a candidate."
   ;; NEED IMPROVE: Second run `liberime-get-commit' will clear commit.
   (liberime-get-commit))
 
+;;;###autoload
 (defun liberime-deploy()
   "deploy liberime to affect config file change"
   (interactive)
   (liberime-finalize)
   (liberime--start))
 
+;;;###autoload
 (defun liberime-set-page-size (page-size)
   "set rime page-size to `prefix' or by default 100
 example C-u 200 M-x liberime-set-page-size
@@ -226,6 +245,23 @@ you only need to do this once.
   (interactive "P")
   (liberime-set-user-config "default.custom" "patch/menu/page_size" (or page-size 100) "int"))
 
+;;;###autoload
+(defun liberime-select-schema-interactive ()
+  "Select a rime schema interactive."
+  (interactive)
+  (let ((schema-list
+         (mapcar (lambda (x)
+                   (cons (format "%s(%s)" (cadr x) (car x))
+                         (car x)))
+                 (ignore-errors (liberime-get-schema-list)))))
+    (if schema-list
+        (let* ((schema-name (completing-read "Rime schema: " schema-list))
+               (schema (alist-get schema-name schema-list nil nil #'equal)))
+          (liberime-select-schema schema)
+          (message "Liberime: select %s schema." schema-name))
+      (message "Liberime: schema %S is not found, ignore." schema))))
+
+;;;###autoload
 (defun liberime-sync ()
   "sync rime user data
 you should specify sync_dir in ~/.emacs.d/rime/installation.yaml

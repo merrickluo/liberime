@@ -29,7 +29,6 @@ RIME_ENABLE_LOG="OFF"
 
 # rime-data
 RIME_DATA_DIR="${MINGW_PREFIX}/share/rime-data"
-INSTALL_PLUM=""
 
 # Archive
 ARCHIVE_DIR="/d/liberime-archive"
@@ -173,26 +172,19 @@ function build_librime() {
 # 安装 rime-data
 function install_rime_data() {
     echo ""
-    echo "########## Install rime data ##########"
+    echo "########## Install rime data from plum.git ##########"
 
     rm -rf $RIME_DATA_DIR
     mkdir -p "$RIME_DATA_DIR"/opencc
     cp -r "${INSTALL_PREFIX}/share/opencc" "$RIME_DATA_DIR"/
 
-    if [[ -n "${INSTALL_PLUM}" ]]; then
-        echo ""
-        echo "########## install plum schema ##########"
-        if [[ ! -d "plum" ]]; then
-            repeatcmd git clone --depth 1 "${GIT_PROTOCOL_URL}rime/plum.git"
-        fi
-        pushd plum
-        export rime_dir="$RIME_DATA_DIR"
-        repeatcmd bash rime-install
-        popd
-
-    else
-        cp -r librime/data/minimal/* "$RIME_DATA_DIR"
+    if [[ ! -d "plum" ]]; then
+        repeatcmd git clone --depth 1 "${GIT_PROTOCOL_URL}rime/plum.git"
     fi
+    pushd plum
+    export rime_dir="$RIME_DATA_DIR"
+    repeatcmd bash rime-install
+    popd
 }
 
 # 编译 liberime
@@ -231,6 +223,7 @@ function build_liberime() {
 # 打包liberime
 function archive_liberime() {
     echo ""
+<<<<<<< HEAD
     echo "########## Archive librime ##########"
 
     local zip_file
@@ -244,15 +237,22 @@ function archive_liberime() {
     local temp_dir="${ARCHIVE_DIR}/temp"
     local temp_bin_dir="${ARCHIVE_DIR}/temp/bin"
     local temp_data_dir="${ARCHIVE_DIR}/temp/share/rime-data"
+=======
+    echo "########## Archive liberime ##########"
+    local temp_dir="${ARCHIVE_DIR}/temp"
+    local temp_bin_dir="${ARCHIVE_DIR}/temp/bin"
+    local temp_site_lisp_dir="${ARCHIVE_DIR}/temp/share/emacs/site-lisp"
+    local temp_rime_data_dir="${ARCHIVE_DIR}/temp/share/rime-data"
+    local zip_file="${ARCHIVE_DIR}/liberime-archive.zip"
+>>>>>>> master
     if [[ -d "${ARCHIVE_DIR}" ]]; then
         rm -rf "${ARCHIVE_DIR}"
     fi
 
-    ## 复制 el 和 README 文件
-    mkdir -p ${temp_dir}
-    cp liberime.el ${temp_dir}
-    cp liberime-config.el ${temp_dir}
-    cp README.org ${temp_dir}
+    ## 复制 el 文件
+    mkdir -p ${temp_site_lisp_dir}
+    cp liberime.el ${temp_site_lisp_dir}
+    cp liberime-config.el ${temp_site_lisp_dir}
 
     ## 复制 liberime-core.dll 和它的所有依赖
     mkdir -p ${temp_bin_dir} 
@@ -264,9 +264,12 @@ function archive_liberime() {
     strip ${temp_bin_dir}/*
 
     ## 复制 rime-data
-    mkdir -p ${temp_data_dir} 
-    cp -r "${RIME_DATA_DIR}"/* ${temp_data_dir}
+    mkdir -p ${temp_rime_data_dir}
+    cp -r "${RIME_DATA_DIR}"/* ${temp_rime_data_dir}
     
+    ## 复制 README.txt
+    cp README-archive.txt ${temp_dir}/README.txt
+
     ## 压缩
     if [[ -f "${zip_file}" ]]; then
         rm -rf "${zip_file}"
@@ -303,8 +306,6 @@ function display_usage() {
 
     -l, --log                   激活 rime 的 log
 
-    -m, --plum                   安裝所有 schema
-
     -h, --help                  查看帮助
 
 HELP
@@ -324,10 +325,6 @@ function main() {
                 ;;
             -l|--log)
                 RIME_ENABLE_LOG="ON"
-                shift
-                ;;
-            -m|--plum)
-                INSTALL_PLUM="TRUE"
                 shift
                 ;;
             -p|--protocol)
@@ -367,7 +364,7 @@ function main() {
 }
 
 # 选项
-ARGS=$(getopt -o rhlma:p:j:t: --long rebuildall,help,log,plum,archive:,protocol:,job:,travis: -n "$0" -- "$@")
+ARGS=$(getopt -o rhla:p:j:t: --long rebuildall,help,log,archive:,protocol:,job:,travis: -n "$0" -- "$@")
 
 
 if [[ $? != 0 ]]; then
