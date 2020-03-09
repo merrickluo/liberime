@@ -29,7 +29,6 @@ RIME_ENABLE_LOG="OFF"
 
 # rime-data
 RIME_DATA_DIR="${MINGW_PREFIX}/share/rime-data"
-INSTALL_PLUM=""
 
 # Archive
 ARCHIVE_DIR="/d/liberime-archive"
@@ -170,26 +169,19 @@ function build_librime() {
 # 安装 rime-data
 function install_rime_data() {
     echo ""
-    echo "########## Install rime data ##########"
+    echo "########## Install rime data from plum.git ##########"
 
     rm -rf $RIME_DATA_DIR
     mkdir -p "$RIME_DATA_DIR"/opencc
     cp -r "${INSTALL_PREFIX}/share/opencc" "$RIME_DATA_DIR"/
 
-    if [[ -n "${INSTALL_PLUM}" ]]; then
-        echo ""
-        echo "########## install plum schema ##########"
-        if [[ ! -d "plum" ]]; then
-            repeatcmd git clone --depth 1 "${GIT_PROTOCOL_URL}rime/plum.git"
-        fi
-        pushd plum
-        export rime_dir="$RIME_DATA_DIR"
-        repeatcmd bash rime-install
-        popd
-
-    else
-        cp -r librime/data/minimal/* "$RIME_DATA_DIR"
+    if [[ ! -d "plum" ]]; then
+        repeatcmd git clone --depth 1 "${GIT_PROTOCOL_URL}rime/plum.git"
     fi
+    pushd plum
+    export rime_dir="$RIME_DATA_DIR"
+    repeatcmd bash rime-install
+    popd
 }
 
 # 编译 liberime
@@ -307,10 +299,6 @@ function main() {
                 RIME_ENABLE_LOG="ON"
                 shift
                 ;;
-            -m|--plum)
-                INSTALL_PLUM="TRUE"
-                shift
-                ;;
             -p|--protocol)
                 GIT_PROTOCOL="$2";
                 shift 2
@@ -344,7 +332,7 @@ function main() {
 }
 
 # 选项
-ARGS=$(getopt -o rhlma:p:j: --long rebuildall,help,log,plum,archive:,protocol:,job: -n "$0" -- "$@")
+ARGS=$(getopt -o rhla:p:j: --long rebuildall,help,log,archive:,protocol:,job: -n "$0" -- "$@")
 
 
 if [[ $? != 0 ]]; then
