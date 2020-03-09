@@ -162,10 +162,8 @@ if NAMES is nil, \"rime-data\" as fallback."
            (error "liberime: building failed with exit code %d" (process-exit-status proc))))))))
 
 (defun liberime-workable-p ()
-  "Return non-nil when liberime can work."
-  (and module-file-suffix
-       (liberime-get-module-file)
-       (featurep 'liberime-core)))
+  "Return t when liberime can work."
+  (featurep 'liberime-core))
 
 (defun liberime--start ()
   (let ((shared-dir (liberime-get-shared-data-dir))
