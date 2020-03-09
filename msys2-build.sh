@@ -33,6 +33,9 @@ RIME_DATA_DIR="${MINGW_PREFIX}/share/rime-data"
 # Archive
 ARCHIVE_DIR="/d/liberime-archive"
 
+# travis name
+TRAVIS_ARCHIVE_NAME=""
+
 function repeatcmd() {
     set +e
     count=0
@@ -131,7 +134,7 @@ function build_marisa() {
     if [[ "${ARCH}" == "x86_64" ]]; then
         ./configure --enable-native-code --disable-shared --prefix="${INSTALL_PREFIX}"
     else
-        ./configure  --prefix="${INSTALL_PREFIX}"
+        ./configure  --disable-shared --prefix="${INSTALL_PREFIX}"
     fi
     make -j ${JOB_NUMBER} && make install
     popd
@@ -221,11 +224,19 @@ function build_liberime() {
 function archive_liberime() {
     echo ""
     echo "########## Archive liberime ##########"
+
+    local zip_file
+    if [[ -n "${TRAVIS_ARCHIVE_NAME}" ]]; then
+        ARCHIVE_DIR="${PWD}/${TRAVIS_ARCHIVE_NAME}"
+        zip_file="${ARCHIVE_DIR}/${TRAVIS_ARCHIVE_NAME}.zip"
+    else
+        zip_file="${ARCHIVE_DIR}/liberime-archive.zip"
+    fi
+
     local temp_dir="${ARCHIVE_DIR}/temp"
     local temp_bin_dir="${ARCHIVE_DIR}/temp/bin"
     local temp_site_lisp_dir="${ARCHIVE_DIR}/temp/share/emacs/site-lisp"
     local temp_rime_data_dir="${ARCHIVE_DIR}/temp/share/rime-data"
-    local zip_file="${ARCHIVE_DIR}/liberime-archive.zip"
     if [[ -d "${ARCHIVE_DIR}" ]]; then
         rm -rf "${ARCHIVE_DIR}"
     fi
@@ -241,6 +252,9 @@ function archive_liberime() {
     cp "${INSTALL_PREFIX}/lib/librime.dll" ${temp_bin_dir}
     copy_all_dll "${temp_bin_dir}/librime.dll" ${temp_bin_dir} "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
 
+    ## strip all dll
+    strip ${temp_bin_dir}/*
+
     ## 复制 rime-data
     mkdir -p ${temp_rime_data_dir}
     cp -r "${RIME_DATA_DIR}"/* ${temp_rime_data_dir}
@@ -255,8 +269,15 @@ function archive_liberime() {
 
     cd ${temp_dir}
     zip -r "${zip_file}" ./ > /dev/null
+    cd ..
     rm -rf ${temp_dir}
     echo "Archive liberime to file: ${zip_file}"
+
+    if [[ -n "${TRAVIS_ARCHIVE_NAME}" ]]; then
+        mv *.zip ..
+        rm -rf ${ARCHIVE_DIR}
+    fi
+
 }
 
 function display_usage() {
@@ -268,15 +289,14 @@ function display_usage() {
 选项:
 
     -r, --rebuildall            是否重新编译所有库
-    -a, --archive=FILENAME      打包 dll 依赖, opencc 词典, 默认的 scheme 到一个 FILENAME.zip 文件
+
+    -t, --travis=FILENAME       travis 打包名
 
     -p, --protocol=PROTOCOL     git clone 时用到的协议，https 或者 ssh 
 
     -j, --job=JOB_NUMBER        编译时的 job 数
 
     -l, --log                   激活 rime 的 log
-
-    -s --schema                 安裝所有 schema
 
     -h, --help                  查看帮助
 
@@ -307,6 +327,10 @@ function main() {
                 JOB_NUMBER="$2";
                 shift 2
                 ;;
+            -t|--travis)
+                TRAVIS_ARCHIVE_NAME="$2";
+                shift 2
+                ;;
             --)
                 shift
                 break
@@ -332,7 +356,7 @@ function main() {
 }
 
 # 选项
-ARGS=$(getopt -o rhla:p:j: --long rebuildall,help,log,archive:,protocol:,job: -n "$0" -- "$@")
+ARGS=$(getopt -o rhla:p:j:t: --long rebuildall,help,log,archive:,protocol:,job:,travis: -n "$0" -- "$@")
 
 
 if [[ $? != 0 ]]; then
