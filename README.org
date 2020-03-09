@@ -84,11 +84,15 @@ user_data_dir:
   :quelpa (liberime
            :fetcher github
            :repo "merrickluo/liberime"
-           :files ("CMakeLists.txt" "Makefile" "src" "liberime.el" "liberime-config.el))
+           :files ("CMakeLists.txt" "Makefile" "src" "liberime*.el" "liberime-config.el"))
   :init
   (add-hook 'liberime-after-start-hook
             (lambda ()
-              (liberime-select-schema "luna_pinyin_simp"))))
+              ;; Select schema delay 5 second, make sure
+              ;; `liberime-load' run finish.
+              (run-with-timer
+               5 1
+               (liberime-select-schema "luna_pinyin_simp")))))
 #+END_SRC
 
 使用本地文件
@@ -97,11 +101,15 @@ user_data_dir:
   :quelpa (liberime
            :fetcher file
            :path "~/Develop/emacs/liberime"
-           :files ("CMakeLists.txt" "Makefile" "src" "liberime.el" "liberime-config.el))
+           :files ("CMakeLists.txt" "Makefile" "src" "liberime.el" "liberime-config.el"))
   :init
   (add-hook 'after-liberime-load-hook
             (lambda ()
-              (liberime-select-schema "luna_pinyin_simp"))))
+              ;; Select schema delay 5 second, make sure
+              ;; `liberime-load' run finish.
+              (run-with-timer
+               5 1
+               (liberime-select-schema "luna_pinyin_simp")))))
 #+END_SRC
 
 #+BEGIN_QUOTE
