@@ -238,6 +238,22 @@ you only need to do this once.
   (interactive "P")
   (liberime-set-user-config "default.custom" "patch/menu/page_size" (or page-size 100) "int"))
 
+;;;###autoload
+(defun liberime-select-schema-interactive ()
+  "Select a rime schema interactive."
+  (interactive)
+  (let ((schema-list
+         (mapcar (lambda (x)
+                   (cons (format "%s(%s)" (cadr x) (car x))
+                         (car x)))
+                 (ignore-errors (liberime-get-schema-list)))))
+    (if schema-list
+        (let* ((schema-name (completing-read "Rime schema: " schema-list))
+               (schema (alist-get schema-name schema-list nil nil #'equal)))
+          (liberime-select-schema schema)
+          (message "Liberime: select %s schema." schema-name))
+      (message "Liberime: schema %S is not found, ignore." schema))))
+
 (defun liberime-sync ()
   "sync rime user data
 you should specify sync_dir in ~/.emacs.d/rime/installation.yaml
