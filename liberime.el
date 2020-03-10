@@ -20,6 +20,13 @@
 
 (make-obsolete-variable 'after-liberime-load-hook 'liberime-after-start-hook "2019-12-13")
 
+(defcustom liberime-module-file nil
+  "Liberime module file on the system.
+When it is nil, librime will auto search module in many path,
+more detail can be found in `liberime-get-module-file'."
+  :group 'liberime
+  :type 'file)
+
 (defcustom liberime-shared-data-dir nil
   "Data directory on the system."
   :group 'liberime
@@ -139,7 +146,8 @@ if NAMES is nil, \"rime-data\" as fallback."
                         (or (executable-find "emacs")
                             "/usr/bin/emacs"))
                        "liberime-core" module-file-suffix)))
-    (or (when (file-exists-p file1) file1)
+    (or liberime-module-file
+        (when (file-exists-p file1) file1)
         (when (file-exists-p file2) file2)
         (locate-library "liberime-core")
         (locate-file
