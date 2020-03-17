@@ -1,17 +1,17 @@
 #+TITLE: liberime [开发中]
 
-* Introduce
+* Introduction
 
-A emacs dynamic module provide librime bindings for emacs
+A dynamic module provides librime bindings for emacs.
 
 目前只实现了几个方法，理想情况是暴露所有 librime 的 API 到 emacs-lisp.
 
-* Require
+* Requirement
 1. emacs 需要启用支持动态模块，在编译的时候使用 --with-modules 选项。
 2. librime 版本 > 1.3.2
 
 * Build
-** Build On Linux:
+** Build on Linux:
 #+NAME: build on linux
 #+BEGIN_SRC shell
 make liberime-core
@@ -21,9 +21,9 @@ ls build/
 make test
 #+END_SRC
 
-** Build On Darwin
-1. Build librime following this [[https://github.com/rime/librime/blob/master/README-mac.md][instruction]], you will need xcode (good luck).
-2. Setup environment variable RIME_PATH to librime project dir, for example:
+** Build on Darwin
+1. Build librime by following this [[https://github.com/rime/librime/blob/master/README-mac.md][instruction]]. You will need Xcode (good luck).
+2. Setup the environment variable RIME_PATH to librime project dir, for example:
    #+begin_src shell
    export RIME_PATH=~/Develop/others/librime
    #+end_src
@@ -37,7 +37,7 @@ make test
    make test
    #+END_SRC
 
-** Build On Windows (Msys2)
+** Build on Windows (Msys2)
 1. 打开 MSYS2 MinGW 终端
 2. 切换到 liberime 所在的目录
 3. 运行下面的命令
@@ -56,7 +56,7 @@ make test
 检查环境变量 =PATH= 的设置，确保 =librime.dll= 可以通过 PATH 找到。
 
 如果用户不想自己编译，可以从 release 区下载 liberime-archive 预编译包
-尝鲜，预编译包主要用于测试，还是建议用户直接使用msys2-build 编译安
+尝鲜，预编译包主要用于测试，还是建议用户直接使用 msys2-build 编译安
 装。
 
 * Usage
