@@ -37,6 +37,6 @@ deploy:
   - liberime-$TRAVIS_TAG-windows-x86_64.zip
   - liberime-$TRAVIS_TAG-windows-i686.zip
   skip_cleanup: true
-  draft: true
+  draft: false
   on:
     tags: true
