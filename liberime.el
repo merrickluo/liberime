@@ -265,7 +265,7 @@ you only need to do this once.
                (schema (alist-get schema-name schema-list nil nil #'equal)))
           (liberime-select-schema schema)
           (message "Liberime: select %s schema." schema-name))
-      (message "Liberime: schema %S is not found, ignore." schema))))
+      (message "Liberime: no schema has been found, ignore."))))
 
 ;;;###autoload
 (defun liberime-sync ()
