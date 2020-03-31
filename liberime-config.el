@@ -1,4 +1,4 @@
-;;; liberime-config.el --- setup liberime automatically
+;;; liberime-config.el --- setup liberime automatically   -*- lexical-binding: t; -*-
 
 ;; Author: A.I.
 ;; Keywords: input method, rime
