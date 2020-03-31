@@ -101,6 +101,8 @@ if NAMES is nil, \"rime-data\" as fallback."
       (make-directory directory))
     directory))
 
+(declare-function w32-shell-execute "w32fns")
+
 (defun liberime-open-directory (directory)
   "Open DIRECTORY with external app."
   (let ((directory (expand-file-name directory)))
