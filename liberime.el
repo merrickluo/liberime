@@ -1,4 +1,4 @@
-;;; liberime.el --- Rime elisp binding
+;;; liberime.el --- Rime elisp binding    -*- lexical-binding: t; -*-
 
 ;; Author: A.I.
 ;; Keywords: input method, rime
