@@ -28,7 +28,9 @@ more detail can be found in `liberime-get-module-file'."
   :type 'file)
 
 (defcustom liberime-shared-data-dir nil
-  "Data directory on the system."
+  "Data directory on the system.
+
+More info: https://github.com/rime/home/wiki/SharedData"
   :group 'liberime
   :type 'file)
 
