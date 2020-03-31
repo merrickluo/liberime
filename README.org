@@ -68,16 +68,13 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
 (with-eval-after-load "liberime"
   (add-hook 'liberime-after-start-hook
             (lambda ()
-              ;; 使用 hook 修改输入方案会有一些问题，由于 liberime 在
-              ;; 执行 sync 等操作之后会重新部署，由于目前的技术限制，
-              ;; 重新部署的通知在 elisp 环境无法收到，所以无法重新执行
-              ;; 这些 hooks,如果需要设置指定的输入方案，建议直接在
-              ;; ~/.emacs.d/rime/default.custom.yaml 配置 Select, 参考：
+              ;; 使用这个 hook 来选择 schema 有时候不太可靠，最好通过
+              ;; Rime 配置文件 (默认为：~/.emacs.d/rime/default.custom.yaml) 来设置默认
+              ;; schema，设置方式可以参考：
               ;; https://gist.github.com/merrickluo/553f39c131d0eb717cd59f72c9d4b60d
               (run-with-timer
                7 1
-               (liberime-select-schema "luna_pinyin_simp"))))
-  (setq pyim-default-scheme 'rime-quanpin))
+               (liberime-select-schema "luna_pinyin_simp")))))
 #+END_SRC
 
 liberime 可以和 [[https://github.com/tumashu/pyim][pyim]] 配合使用：
@@ -95,7 +92,6 @@ rime 用户数据（user_data_dir）, 用户可以使用下面两个变量强制
 
 1. liberime-shared-data-dir
 2. liberime-user-data-dir
-
 
 ** 部署 Rime
 
