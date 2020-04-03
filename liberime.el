@@ -265,21 +265,25 @@ you only need to do this once.
 
 (defun liberime-select-schema-1 (orig_fun schema_id)
   "Advice function of `liberime-select-schema'."
-  (let ((n 10))
+  (let ((n 1))
     (setq liberime-current-schema schema_id)
     (when liberime-select-schema-timer
       (cancel-timer liberime-select-schema-timer))
     (setq liberime-select-schema-timer
           (run-with-timer
-           1 3
+           1 2
            (lambda ()
              (let ((id (alist-get 'schema_id (ignore-errors (liberime-get-status)))))
                (cond ((or (equal id schema_id)
-                          (< n 0))
+                          (> n 10))
+                      (if (> n 10)
+                          (message "Liberime: fail to select schema %S." schema_id)
+                        (message "Liberime: success to select schema %S." schema_id))
                       (cancel-timer liberime-select-schema-timer)
                       (setq liberime-select-schema-timer nil))
-                     (t (ignore-errors (funcall orig_fun schema_id))))
-               (setq n (- n 1))))))
+                     (t (message "Liberime: try (n=%s) to select schema %S ..." n schema_id)
+                        (ignore-errors (funcall orig_fun schema_id))))
+               (setq n (+ n 1))))))
     t))
 
 (advice-add 'liberime-select-schema :around #'liberime-select-schema-1)
@@ -296,8 +300,7 @@ you only need to do this once.
     (if schema-list
         (let* ((schema-name (completing-read "Rime schema: " schema-list))
                (schema (alist-get schema-name schema-list nil nil #'equal)))
-          (liberime-select-schema schema)
-          (message "Liberime: select %s schema." schema-name))
+          (liberime-select-schema schema))
       (message "Liberime: no schema has been found, ignore."))))
 
 ;;;###autoload
