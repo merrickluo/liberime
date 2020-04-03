@@ -43,14 +43,15 @@ More info: https://github.com/rime/home/wiki/SharedData"
 (defvar liberime-message
   "Liberime can not load properly, please check:
 1. Does your emacs support dynamic module?
-   a. Emacs should build with \"--with-modules\".
-   b. Variable `module-file-suffix' should return non-nil.
+   a. Emacs should build with modules support.
+   b. When Emacs support dynamic module, variable
+      `module-file-suffix' should non-nil.
 2. Does liberime-core module compile and load properly?
    a. User should install librime, gcc and cmake,
       then build liberime-core module according to README.org,
       Shortcut: (liberime-open-package-readme)
    b. User can try (liberime-build) shortcut function.
-   c. Function (liberime-workable-p) should return non-nil.
+   c. Function (liberime-workable-p) should return t.
 3. When liberime works, call (liberime-load) to load it."
   "The message which will be showed when `liberime-load' failure.")
 
