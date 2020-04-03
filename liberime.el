@@ -280,6 +280,7 @@ you only need to do this once.
                       (if (> n 10)
                           (message "Liberime: fail to select schema %S." schema_id)
                         (message "Liberime: success to select schema %S." schema_id))
+                      (message "")
                       (cancel-timer liberime-select-schema-timer)
                       (setq liberime-select-schema-timer nil))
                      (t (message "Liberime: try (n=%s) to select schema %S ..." n schema_id)
