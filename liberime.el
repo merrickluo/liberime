@@ -182,6 +182,8 @@ if NAMES is nil, \"rime-data\" as fallback."
         (user-dir (liberime-get-user-data-dir)))
     (message "Liberime: start with shared dir %S, user dir: %S" shared-dir user-dir)
     (liberime-start shared-dir user-dir)
+    (when liberime-current-schema
+      (liberime-select-schema liberime-current-schema))
     (run-hooks 'liberime-after-start-hook)))
 
 ;;;###autoload
