@@ -260,14 +260,14 @@ you only need to do this once.
 
 (defun liberime-select-schema-1 (orig_fun schema_id)
   "Advice function of `liberime-select-schema'."
-  (let ((n 60))
+  (let ((n 10))
     (when liberime-select-schema-timer
       (cancel-timer liberime-select-schema-timer))
     (setq liberime-select-schema-timer
           (run-with-timer
-           1 2
+           1 3
            (lambda ()
-             (let ((id (alist-get 'schema_id (liberime-get-status))))
+             (let ((id (alist-get 'schema_id (ignore-errors (liberime-get-status)))))
                (cond ((or (equal id schema_id)
                           (< n 0))
                       (cancel-timer liberime-select-schema-timer)
