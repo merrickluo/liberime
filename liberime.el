@@ -255,6 +255,29 @@ you only need to do this once.
   (interactive "P")
   (liberime-set-user-config "default.custom" "patch/menu/page_size" (or page-size 100) "int"))
 
+(defvar liberime-select-schema-timer nil
+  "Timer used by `liberime-select-schema'.")
+
+(defun liberime-select-schema-1 (orig_fun schema_id)
+  "Advice function of `liberime-select-schema'."
+  (let ((n 60))
+    (when liberime-select-schema-timer
+      (cancel-timer liberime-select-schema-timer))
+    (setq liberime-select-schema-timer
+          (run-with-timer
+           1 2
+           (lambda ()
+             (let ((id (alist-get 'schema_id (liberime-get-status))))
+               (cond ((or (equal id schema_id)
+                          (< n 0))
+                      (cancel-timer liberime-select-schema-timer)
+                      (setq liberime-select-schema-timer nil))
+                     (t (ignore-errors (funcall orig_fun schema_id))))
+               (setq n (- n 1))))))
+    t))
+
+(advice-add 'liberime-select-schema :around #'liberime-select-schema-1)
+
 ;;;###autoload
 (defun liberime-select-schema-interactive ()
   "Select a rime schema interactive."
