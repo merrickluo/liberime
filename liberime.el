@@ -54,6 +54,12 @@ More info: https://github.com/rime/home/wiki/SharedData"
 3. When liberime works, call (liberime-load) to load it."
   "The message which will be showed when `liberime-load' failure.")
 
+(defvar liberime-select-schema-timer nil
+  "Timer used by `liberime-select-schema'.")
+
+(defvar liberime-current-schema nil
+  "The rime schema set by `liberime-select-schema'.")
+
 (defun liberime-get-library-directory ()
   "Return the liberime package direcory."
   (file-name-directory
@@ -256,12 +262,6 @@ you only need to do this once.
 "
   (interactive "P")
   (liberime-set-user-config "default.custom" "patch/menu/page_size" (or page-size 10) "int"))
-
-(defvar liberime-select-schema-timer nil
-  "Timer used by `liberime-select-schema'.")
-
-(defvar liberime-current-schema nil
-  "The rime schema set by `liberime-select-schema'.")
 
 (defun liberime-select-schema-1 (orig_fun schema_id)
   "Advice function of `liberime-select-schema'."
