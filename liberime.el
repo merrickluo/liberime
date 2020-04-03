@@ -258,9 +258,13 @@ you only need to do this once.
 (defvar liberime-select-schema-timer nil
   "Timer used by `liberime-select-schema'.")
 
+(defvar liberime-current-schema nil
+  "The rime schema set by `liberime-select-schema'.")
+
 (defun liberime-select-schema-1 (orig_fun schema_id)
   "Advice function of `liberime-select-schema'."
   (let ((n 10))
+    (setq liberime-current-schema schema_id)
     (when liberime-select-schema-timer
       (cancel-timer liberime-select-schema-timer))
     (setq liberime-select-schema-timer
