@@ -439,7 +439,8 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
     result_array[0] = CONS_NIL("commit-text-preview");
 
   // 2. context.composition
-  emacs_value composition_array[5];
+  size_t composition_size = 5;
+  emacs_value composition_array[composition_size];
   composition_array[0] = CONS_INT("length", context.composition.length);
   composition_array[1] = CONS_INT("cursor-pos", context.composition.cursor_pos);
   composition_array[2] = CONS_INT("sel-start", context.composition.sel_start);
@@ -454,12 +455,13 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
     return em_nil;
     /* composition_array[4] = CONS_NIL("preedit"); */
 
-  emacs_value composition_value = em_list(env, 5, composition_array);
+  emacs_value composition_value = em_list(env, composition_size, composition_array);
   result_array[1] = CONS_VALUE("composition", composition_value);
 
   // 3. context.menu
   if (context.menu.num_candidates) {
-    emacs_value menu_array[6];
+    size_t menu_size = 6;
+    emacs_value menu_array[menu_size];
     menu_array[0] = CONS_INT("highlighted-candidate-index", context.menu.highlighted_candidate_index);
     menu_array[1] = CONS_VALUE("last-page-p", context.menu.is_last_page ? em_t : em_nil);
     menu_array[2] = CONS_INT("num-candidates", context.menu.num_candidates);
@@ -474,7 +476,7 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
     }
     emacs_value candidates = em_list(env, context.menu.num_candidates, carray);
     menu_array[5] = CONS_VALUE("candidates", candidates);
-    emacs_value menu = em_list(env, 6, menu_array);
+    emacs_value menu = em_list(env, menu_size, menu_array);
     result_array[2] = CONS_VALUE("menu", menu);
   } else {
     result_array[2] = CONS_NIL("menu");
