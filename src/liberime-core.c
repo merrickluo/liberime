@@ -129,10 +129,10 @@ static emacs_value start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], vo
   RIME_STRUCT(RimeTraits, emacs_rime_traits);
 
   emacs_rime_traits.shared_data_dir = shared_data_dir;
-  emacs_rime_traits.app_name = "rime.emacs";
+  emacs_rime_traits.app_name = "rime.emacs-liberime";
   emacs_rime_traits.user_data_dir = user_data_dir;
   emacs_rime_traits.distribution_name = "Rime";
-  emacs_rime_traits.distribution_code_name = "emacs-rime";
+  emacs_rime_traits.distribution_code_name = "emacs-liberime";
   emacs_rime_traits.distribution_version = "0.1.0";
   if (rime->first_run) {
     rime->api->setup(&emacs_rime_traits);
