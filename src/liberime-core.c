@@ -488,6 +488,53 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
   return result;
 }
 
+DOCSTRING(get_status, "", "Get rime status.");
+static emacs_value get_status(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime*) data;
+
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    return em_nil;
+  }
+
+  RIME_STRUCT(RimeStatus, status);
+  if (!rime->api->get_status(rime->session_id, &status)){
+    em_signal_rimeerr(env, 2, "Cannot get status.");
+    return em_nil;
+  }
+
+  size_t result_size = 9;
+  emacs_value result_a[result_size];
+
+  char *schema_id = _copy_string(status.schema_id);
+  if (schema_id)
+    result_a[0] = CONS_STRING("schema_id", schema_id);
+  else
+    result_a[0] = CONS_NIL("schema_id");
+
+  char *schema_name = _copy_string(status.schema_name);
+  if (schema_name)
+    result_a[1] = CONS_STRING("schema_name", schema_name);
+  else
+    result_a[1] = CONS_NIL("schema_name");
+
+  result_a[2] = CONS_VALUE("is_disabled", status.is_disabled ? em_t : em_nil);
+  result_a[3] = CONS_VALUE("is_composing", status.is_composing ? em_t : em_nil);
+  result_a[4] = CONS_VALUE("is_ascii_mode", status.is_ascii_mode ? em_t : em_nil);
+  result_a[5] = CONS_VALUE("is_full_shape", status.is_full_shape ? em_t : em_nil);
+  result_a[6] = CONS_VALUE("is_simplified", status.is_simplified ? em_t : em_nil);
+  result_a[7] = CONS_VALUE("is_traditional", status.is_traditional ? em_t : em_nil);
+  result_a[8] = CONS_VALUE("is_ascii_punct", status.is_ascii_punct ? em_t : em_nil);
+
+  // build result
+  emacs_value result = em_list(env, result_size, result_a);
+
+  rime->api->free_status(&status);
+
+  return result;
+}
+
+
 DOCSTRING(get_user_config, "USER-CONFIG OPTION &optional RETURN-VALUE-TYPE",
           "Get OPTION of rime USER-CONFIG.\n"
           "The return value type can be set with RETURN-VALUE-TYPE.");
@@ -780,6 +827,9 @@ void liberime_init(emacs_env *env) {
   // output
   DEFUN("liberime-get-commit", get_commit, 0, 0);
   DEFUN("liberime-get-context", get_context, 0, 0);
+
+  // status
+  DEFUN("liberime-get-status", get_status, 0, 0);
 
   // sync
   DEFUN("liberime-get-sync-dir", get_sync_dir, 0, 0);
