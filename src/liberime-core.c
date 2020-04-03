@@ -429,42 +429,42 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
   }
 
   size_t result_size = 3;
-  emacs_value result_a[result_size];
+  emacs_value result_array[result_size];
 
   // 0. context.commit_text_preview
   char *ctp_str = _copy_string(context.commit_text_preview);
   if (ctp_str)
-    result_a[0] = CONS_STRING("commit-text-preview", ctp_str);
+    result_array[0] = CONS_STRING("commit-text-preview", ctp_str);
   else
-    result_a[0] = CONS_NIL("commit-text-preview");
+    result_array[0] = CONS_NIL("commit-text-preview");
 
   // 2. context.composition
-  emacs_value composition_a[5];
-  composition_a[0] = CONS_INT("length", context.composition.length);
-  composition_a[1] = CONS_INT("cursor-pos", context.composition.cursor_pos);
-  composition_a[2] = CONS_INT("sel-start", context.composition.sel_start);
-  composition_a[3] = CONS_INT("sel-end", context.composition.sel_end);
+  emacs_value composition_array[5];
+  composition_array[0] = CONS_INT("length", context.composition.length);
+  composition_array[1] = CONS_INT("cursor-pos", context.composition.cursor_pos);
+  composition_array[2] = CONS_INT("sel-start", context.composition.sel_start);
+  composition_array[3] = CONS_INT("sel-end", context.composition.sel_end);
 
   char *preedit_str = _copy_string(context.composition.preedit);
   if (preedit_str)
-    composition_a[4] = CONS_STRING("preedit", preedit_str);
+    composition_array[4] = CONS_STRING("preedit", preedit_str);
   else
     // When we don't have a preedit,
     // The composition should be nil.
     return em_nil;
-    /* composition_a[4] = CONS_NIL("preedit"); */
+    /* composition_array[4] = CONS_NIL("preedit"); */
 
-  emacs_value composition_value = em_list(env, 5, composition_a);
-  result_a[1] = CONS_VALUE("composition", composition_value);
+  emacs_value composition_value = em_list(env, 5, composition_array);
+  result_array[1] = CONS_VALUE("composition", composition_value);
 
   // 3. context.menu
   if (context.menu.num_candidates) {
-    emacs_value menu_a[6];
-    menu_a[0] = CONS_INT("highlighted-candidate-index", context.menu.highlighted_candidate_index);
-    menu_a[1] = CONS_VALUE("last-page-p", context.menu.is_last_page ? em_t : em_nil);
-    menu_a[2] = CONS_INT("num-candidates", context.menu.num_candidates);
-    menu_a[3] = CONS_INT("page-no", context.menu.page_no);
-    menu_a[4] = CONS_INT("page-size", context.menu.page_size);
+    emacs_value menu_array[6];
+    menu_array[0] = CONS_INT("highlighted-candidate-index", context.menu.highlighted_candidate_index);
+    menu_array[1] = CONS_VALUE("last-page-p", context.menu.is_last_page ? em_t : em_nil);
+    menu_array[2] = CONS_INT("num-candidates", context.menu.num_candidates);
+    menu_array[3] = CONS_INT("page-no", context.menu.page_no);
+    menu_array[4] = CONS_INT("page-size", context.menu.page_size);
     emacs_value carray[context.menu.num_candidates];
     // Build candidates
     for (int i = 0; i < context.menu.num_candidates; i++) {
@@ -473,15 +473,15 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
       carray[i] = env->make_string(env, ctext, strlen(ctext));
     }
     emacs_value candidates = em_list(env, context.menu.num_candidates, carray);
-    menu_a[5] = CONS_VALUE("candidates", candidates);
-    emacs_value menu = em_list(env, 6, menu_a);
-    result_a[2] = CONS_VALUE("menu", menu);
+    menu_array[5] = CONS_VALUE("candidates", candidates);
+    emacs_value menu = em_list(env, 6, menu_array);
+    result_array[2] = CONS_VALUE("menu", menu);
   } else {
-    result_a[2] = CONS_NIL("menu");
+    result_array[2] = CONS_NIL("menu");
   }
 
   // build result
-  emacs_value result = em_list(env, result_size, result_a);
+  emacs_value result = em_list(env, result_size, result_array);
 
   rime->api->free_context(&context);
 
@@ -504,30 +504,30 @@ static emacs_value get_status(emacs_env *env, ptrdiff_t nargs, emacs_value args[
   }
 
   size_t result_size = 9;
-  emacs_value result_a[result_size];
+  emacs_value result_array[result_size];
 
   char *schema_id = _copy_string(status.schema_id);
   if (schema_id)
-    result_a[0] = CONS_STRING("schema_id", schema_id);
+    result_array[0] = CONS_STRING("schema_id", schema_id);
   else
-    result_a[0] = CONS_NIL("schema_id");
+    result_array[0] = CONS_NIL("schema_id");
 
   char *schema_name = _copy_string(status.schema_name);
   if (schema_name)
-    result_a[1] = CONS_STRING("schema_name", schema_name);
+    result_array[1] = CONS_STRING("schema_name", schema_name);
   else
-    result_a[1] = CONS_NIL("schema_name");
+    result_array[1] = CONS_NIL("schema_name");
 
-  result_a[2] = CONS_VALUE("is_disabled", status.is_disabled ? em_t : em_nil);
-  result_a[3] = CONS_VALUE("is_composing", status.is_composing ? em_t : em_nil);
-  result_a[4] = CONS_VALUE("is_ascii_mode", status.is_ascii_mode ? em_t : em_nil);
-  result_a[5] = CONS_VALUE("is_full_shape", status.is_full_shape ? em_t : em_nil);
-  result_a[6] = CONS_VALUE("is_simplified", status.is_simplified ? em_t : em_nil);
-  result_a[7] = CONS_VALUE("is_traditional", status.is_traditional ? em_t : em_nil);
-  result_a[8] = CONS_VALUE("is_ascii_punct", status.is_ascii_punct ? em_t : em_nil);
+  result_array[2] = CONS_VALUE("is_disabled", status.is_disabled ? em_t : em_nil);
+  result_array[3] = CONS_VALUE("is_composing", status.is_composing ? em_t : em_nil);
+  result_array[4] = CONS_VALUE("is_ascii_mode", status.is_ascii_mode ? em_t : em_nil);
+  result_array[5] = CONS_VALUE("is_full_shape", status.is_full_shape ? em_t : em_nil);
+  result_array[6] = CONS_VALUE("is_simplified", status.is_simplified ? em_t : em_nil);
+  result_array[7] = CONS_VALUE("is_traditional", status.is_traditional ? em_t : em_nil);
+  result_array[8] = CONS_VALUE("is_ascii_punct", status.is_ascii_punct ? em_t : em_nil);
 
   // build result
-  emacs_value result = em_list(env, result_size, result_a);
+  emacs_value result = em_list(env, result_size, result_array);
 
   rime->api->free_status(&status);
 
