@@ -10,7 +10,7 @@ clean:
 	rm -rf third_party_build
 
 test: liberime-core
-	${EMACS} -Q -L build -L . test.el
+	${EMACS} -Q -L build -L . liberime-test.el
 
 ccls:
 	cmake -H. -BDebug -DCMAKE_BUILD_TYPE=Debug \
