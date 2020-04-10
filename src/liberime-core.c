@@ -6,6 +6,7 @@
 
 #include <unistd.h>
 
+#include "emacs-module.h"
 #include "interface.h"
 #include "liberime-core.h"
 
@@ -31,6 +32,7 @@
 #define CONS_VALUE(key, value) em_cons(env, env->intern(env, key), value)
 
 #define CANDIDATE_MAXSTRLEN 1024
+#define SEARCH_CANDIDATE_MAXLEN 100
 #define SCHEMA_MAXSTRLEN 1024
 #define CONFIG_MAXSTRLEN 1024
 #define INPUT_MAXSTRLEN 1024
@@ -92,32 +94,6 @@ static char *_copy_string(char *str) {
   } else {
     return NULL;
   }
-}
-
-EmacsRimeCandidates _get_candidates(EmacsRime *rime, size_t limit) {
-  EmacsRimeCandidates c = {
-      .size = 0,
-      .list = (CandidateLinkedList *)malloc(sizeof(CandidateLinkedList))};
-
-  RimeCandidateListIterator iterator = {0};
-  CandidateLinkedList *next = c.list;
-  if (rime->api->candidate_list_begin(rime->session_id, &iterator)) {
-    while (rime->api->candidate_list_next(&iterator) &&
-           (limit == 0 || c.size < limit)) {
-      c.size += 1;
-
-      next->text = _copy_string(iterator.candidate.text);
-      next->comment = _copy_string(iterator.candidate.comment);
-
-      next->next = (CandidateLinkedList *)malloc(sizeof(CandidateLinkedList));
-
-      next = next->next;
-    }
-    next->next = NULL;
-    rime->api->candidate_list_end(&iterator);
-  }
-
-  return c;
 }
 
 // bindings
@@ -187,10 +163,11 @@ static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
   EmacsRime *rime = (EmacsRime *)data;
   char *string = em_get_string(env, args[0]);
 
-  size_t limit = 0;
+  size_t limit = SEARCH_CANDIDATE_MAXLEN;
+
   if (nargs == 2) {
     if (!env->is_not_nil(env, args[1])) {
-      limit = 0;
+      return em_nil;
     } else {
       limit = env->extract_integer(env, args[1]);
       // if limit set to 0 return nil immediately
@@ -208,38 +185,26 @@ static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
   rime->api->clear_composition(rime->session_id);
   rime->api->simulate_key_sequence(rime->session_id, string);
 
-  EmacsRimeCandidates candidates = _get_candidates(rime, limit);
+  emacs_value *candidates = malloc(sizeof(emacs_value) * limit);
+  RimeCandidateListIterator iterator = {0};
 
-  // printf("%s: find candidates size: %ld\n", string, candidates.size);
-  // return nil if no candidates found
-  if (candidates.size == 0) {
-    return em_nil;
-  }
+  size_t size = 0;
+  if (rime->api->candidate_list_begin(rime->session_id, &iterator)) {
+    while (rime->api->candidate_list_next(&iterator) &&
+           (limit == 0 || size < limit)) {
 
-  emacs_value *array = malloc(sizeof(emacs_value) * candidates.size);
-
-  CandidateLinkedList *next = candidates.list;
-  int i = 0;
-  while (next && i < candidates.size) {
-    emacs_value value = env->make_string(env, next->text, strlen(next->text));
-    if (next->comment) {
-      emacs_value comment =
-          env->make_string(env, next->comment, strlen(next->comment));
-      value = em_propertize(env, value, ":comment", comment);
+      emacs_value value = em_string(env, iterator.candidate.text);
+      if (iterator.candidate.comment) {
+        emacs_value comment = em_string(env, iterator.candidate.comment);
+        value = em_propertize(env, value, ":comment", comment);
+      }
+      candidates[size++] = value;
     }
-    array[i++] = value;
-    next = next->next;
+    rime->api->candidate_list_end(&iterator);
   }
-  // printf("conveted array size: %d\n", i);
 
-  emacs_value result = em_list(env, candidates.size, array);
-
-  // free(candidates.candidates);
-  free_candidate_list(candidates.list);
-  free(array);
   free(string);
-
-  return result;
+  return em_list(env, size, candidates);
 }
 
 DOCSTRING(get_sync_dir, "", "Get rime sync directory.");
