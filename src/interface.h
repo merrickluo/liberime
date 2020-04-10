@@ -106,6 +106,31 @@ void em_provide(emacs_env *env, const char *feature);
  */
 bool em_user_ptrp(emacs_env *env, emacs_value val);
 
-emacs_value em_list(emacs_env *env, ptrdiff_t array_size, emacs_value *array);
+/**
+ * make a Emacs list with array
+ * @param env the active Emacs enviroment.
+ * @param size size of the array.
+ * @param array pointer.
+ * @return emacs_value represent the list.
+ */
+emacs_value em_list(emacs_env *env, ptrdiff_t size, emacs_value *array);
+
+/**
+ * propertize the value
+ * @param env the active Emacs enviroment.
+ * @param target the propertize target.
+ * @param key property key.
+ * @param value property value.
+ * @return propertized value of param value.
+ */
+emacs_value em_propertize(emacs_env *env, emacs_value target, const char *key,
+                          emacs_value value);
+/**
+ * make a Emacs symbol with string.
+ * @param env the active Emacs enviroment.
+ * @param str string that to be a symbol.
+ * @return emacs_value represents a symbol.
+ */
+emacs_value em_symbol(emacs_env *env, const char *str);
 
 #endif /* INTERFACE_H */

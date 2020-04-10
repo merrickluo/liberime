@@ -45,7 +45,8 @@ typedef struct _EmacsRime {
 } EmacsRime;
 
 typedef struct _CandidateLinkedList {
-  char *value;
+  char *text;
+  char *comment;
   struct _CandidateLinkedList *next;
 } CandidateLinkedList;
 
@@ -105,7 +106,9 @@ EmacsRimeCandidates _get_candidates(EmacsRime *rime, size_t limit) {
            (limit == 0 || c.size < limit)) {
       c.size += 1;
 
-      next->value = _copy_string(iterator.candidate.text);
+      next->text = _copy_string(iterator.candidate.text);
+      next->comment = _copy_string(iterator.candidate.comment);
+
       next->next = (CandidateLinkedList *)malloc(sizeof(CandidateLinkedList));
 
       next = next->next;
@@ -218,14 +221,18 @@ static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
   CandidateLinkedList *next = candidates.list;
   int i = 0;
   while (next && i < candidates.size) {
-    const char *value = next->value;
-    array[i++] = env->make_string(env, value, strlen(value));
+    emacs_value value = env->make_string(env, next->text, strlen(next->text));
+    if (next->comment) {
+      emacs_value comment =
+          env->make_string(env, next->comment, strlen(next->comment));
+      value = em_propertize(env, value, ":comment", comment);
+    }
+    array[i++] = value;
     next = next->next;
   }
   // printf("conveted array size: %d\n", i);
 
-  emacs_value flist = env->intern(env, "list");
-  emacs_value result = env->funcall(env, flist, candidates.size, array);
+  emacs_value result = em_list(env, candidates.size, array);
 
   // free(candidates.candidates);
   free_candidate_list(candidates.list);
@@ -490,10 +497,19 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs,
     emacs_value carray[context.menu.num_candidates];
     // Build candidates
     for (int i = 0; i < context.menu.num_candidates; i++) {
-      RimeCandidate c = context.menu.candidates[i];
-      char *ctext = _copy_string(c.text);
-      carray[i] = env->make_string(env, ctext, strlen(ctext));
+      RimeCandidate candidate = context.menu.candidates[i];
+
+      emacs_value value =
+          env->make_string(env, candidate.text, strlen(candidate.text));
+      if (candidate.comment) {
+        emacs_value comment =
+            env->make_string(env, candidate.comment, strlen(candidate.comment));
+        value = em_propertize(env, value, ":comment", comment);
+      }
+
+      carray[i] = value;
     }
+
     emacs_value candidates = em_list(env, context.menu.num_candidates, carray);
     menu_array[5] = CONS_VALUE("candidates", candidates);
     emacs_value menu = em_list(env, menu_size, menu_array);

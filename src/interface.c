@@ -19,7 +19,7 @@ emacs_value em_direct, em_symbolic;
 // Symbols that are only reachable from within this file.
 static emacs_value _cons, _defalias, _define_error, _expand_file_name, _rimeerr,
     _not_implemented, _provide, _user_ptrp, _vector, _wrong_type_argument,
-    _wrong_value_argument, _list;
+    _wrong_value_argument, _list, _propertize;
 
 void em_init(emacs_env *env) {
   em_nil = GLOBREF(INTERN("nil"));
@@ -41,6 +41,7 @@ void em_init(emacs_env *env) {
   _vector = GLOBREF(INTERN("vector"));
   _wrong_type_argument = GLOBREF(INTERN("wrong-type-argument"));
   _wrong_value_argument = GLOBREF(INTERN("wrong-value-argument"));
+  _propertize = GLOBREF(INTERN("propertize"));
 
   em_define_error(env, _rimeerr, "Rime error");
   em_define_error(env, _not_implemented, "Not implemented");
@@ -134,3 +135,10 @@ bool em_user_ptrp(emacs_env *env, emacs_value val) {
 emacs_value em_list(emacs_env *env, ptrdiff_t array_size, emacs_value *array) {
   return env->funcall(env, _list, array_size, array);
 }
+
+emacs_value em_propertize(emacs_env *env, emacs_value target, const char *key,
+                          emacs_value value) {
+  return em_funcall(env, _propertize, 3, target, INTERN(key), value);
+}
+
+emacs_value em_symbol(emacs_env *env, const char *str) { INTERN(str); }
