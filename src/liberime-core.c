@@ -27,7 +27,7 @@
 #define CONS_INT(key, integer)                                                 \
   em_cons(env, env->intern(env, key), env->make_integer(env, integer));
 #define CONS_STRING(key, str)                                                  \
-  em_cons(env, env->intern(env, key), env->make_string(env, str, strlen(str)))
+  em_cons(env, env->intern(env, key), em_string(env, str))
 #define CONS_NIL(key) em_cons(env, env->intern(env, key), em_nil)
 #define CONS_VALUE(key, value) em_cons(env, env->intern(env, key), value)
 
@@ -82,18 +82,6 @@ static bool _ensure_session(EmacsRime *rime) {
     }
   }
   return true;
-}
-
-static char *_copy_string(char *str) {
-  if (str) {
-    size_t size = strnlen(str, CANDIDATE_MAXSTRLEN);
-    char *new_str = malloc(size + 1);
-    strncpy(new_str, str, size);
-    new_str[size] = '\0';
-    return new_str;
-  } else {
-    return NULL;
-  }
 }
 
 // bindings
@@ -391,11 +379,10 @@ static emacs_value get_commit(emacs_env *env, ptrdiff_t nargs,
       return em_nil;
     }
 
-    char *commit_str = _copy_string(commit.text);
+    emacs_value result = em_string(env, commit.text);
     rime->api->free_commit(&commit);
-    // printf("commit str is %s\n", commit_str);
 
-    return env->make_string(env, commit_str, strlen(commit_str));
+    return result;
   }
 
   return em_nil;
@@ -420,12 +407,19 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs,
   size_t result_size = 3;
   emacs_value result_array[result_size];
 
+  // When we don't have a preedit,
+  // The composition should be nil.
+  if (!context.composition.preedit) {
+    return em_nil;
+  }
+
   // 0. context.commit_text_preview
-  char *ctp_str = _copy_string(context.commit_text_preview);
-  if (ctp_str)
-    result_array[0] = CONS_STRING("commit-text-preview", ctp_str);
-  else
+  if (context.commit_text_preview) {
+    result_array[0] =
+        CONS_STRING("commit-text-preview", context.commit_text_preview);
+  } else {
     result_array[0] = CONS_NIL("commit-text-preview");
+  }
 
   // 2. context.composition
   size_t composition_size = 5;
@@ -434,15 +428,7 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs,
   composition_array[1] = CONS_INT("cursor-pos", context.composition.cursor_pos);
   composition_array[2] = CONS_INT("sel-start", context.composition.sel_start);
   composition_array[3] = CONS_INT("sel-end", context.composition.sel_end);
-
-  char *preedit_str = _copy_string(context.composition.preedit);
-  if (preedit_str)
-    composition_array[4] = CONS_STRING("preedit", preedit_str);
-  else
-    // When we don't have a preedit,
-    // The composition should be nil.
-    return em_nil;
-  /* composition_array[4] = CONS_NIL("preedit"); */
+  composition_array[4] = CONS_STRING("preedit", context.composition.preedit);
 
   emacs_value composition_value =
       em_list(env, composition_size, composition_array);
@@ -508,17 +494,17 @@ static emacs_value get_status(emacs_env *env, ptrdiff_t nargs,
   size_t result_size = 9;
   emacs_value result_array[result_size];
 
-  char *schema_id = _copy_string(status.schema_id);
-  if (schema_id)
-    result_array[0] = CONS_STRING("schema_id", schema_id);
-  else
+  if (status.schema_id) {
+    result_array[0] = CONS_STRING("schema_id", status.schema_id);
+  } else {
     result_array[0] = CONS_NIL("schema_id");
+  }
 
-  char *schema_name = _copy_string(status.schema_name);
-  if (schema_name)
-    result_array[1] = CONS_STRING("schema_name", schema_name);
-  else
+  if (status.schema_name) {
+    result_array[1] = CONS_STRING("schema_name", status.schema_name);
+  } else {
     result_array[1] = CONS_NIL("schema_name");
+  }
 
   result_array[2] =
       CONS_VALUE("is_disabled", status.is_disabled ? em_t : em_nil);
