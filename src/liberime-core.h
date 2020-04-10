@@ -1,5 +1,5 @@
-#include <stdbool.h>
 #include <rime_api.h>
+#include <stdbool.h>
 
 #include "emacs-module.h"
 

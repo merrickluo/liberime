@@ -1,9 +1,8 @@
-#include <stdbool.h>
-#include <stdlib.h>
+#include <rime_api.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <rime_api.h>
 
 #include <unistd.h>
 
@@ -16,31 +15,28 @@
  * @param args The argument list as visible from Emacs (without parens).
  * @param docstring The rest of the documentation.
  */
-#define DOCSTRING(name, args, docstring)                                \
-const char *liberime_##name##__doc = (docstring "\n\n(fn " args ")")
+#define DOCSTRING(name, args, docstring)                                       \
+  const char *liberime_##name##__doc = (docstring "\n\n(fn " args ")")
 
-#define DEFUN(ename, cname, min_nargs, max_nargs)                       \
-  em_defun(env, (ename),                                                \
-           env->make_function(env, (min_nargs), (max_nargs),            \
-                              cname,                                    \
-                              liberime_##cname##__doc,                  \
-                              rime))
+#define DEFUN(ename, cname, min_nargs, max_nargs)                              \
+  em_defun(env, (ename),                                                       \
+           env->make_function(env, (min_nargs), (max_nargs), cname,            \
+                              liberime_##cname##__doc, rime))
 
-#define CONS_INT(key, integer)                                          \
+#define CONS_INT(key, integer)                                                 \
   em_cons(env, env->intern(env, key), env->make_integer(env, integer));
-#define CONS_STRING(key, str)                                           \
+#define CONS_STRING(key, str)                                                  \
   em_cons(env, env->intern(env, key), env->make_string(env, str, strlen(str)))
-#define CONS_NIL(key) \
-  em_cons(env, env->intern(env, key), em_nil)
-#define CONS_VALUE(key, value)                  \
-  em_cons(env, env->intern(env, key), value)
+#define CONS_NIL(key) em_cons(env, env->intern(env, key), em_nil)
+#define CONS_VALUE(key, value) em_cons(env, env->intern(env, key), value)
 
 #define CANDIDATE_MAXSTRLEN 1024
 #define SCHEMA_MAXSTRLEN 1024
 #define CONFIG_MAXSTRLEN 1024
 #define INPUT_MAXSTRLEN 1024
 
-#define NO_SESSION_ERR "Cannot connect to librime session, make sure to run liberime-start first."
+#define NO_SESSION_ERR                                                         \
+  "Cannot connect to librime session, make sure to run liberime-start first."
 
 typedef struct _EmacsRime {
   RimeSessionId session_id;
@@ -49,7 +45,8 @@ typedef struct _EmacsRime {
 } EmacsRime;
 
 typedef struct _CandidateLinkedList {
-  char *value;
+  char *text;
+  char *comment;
   struct _CandidateLinkedList *next;
 } CandidateLinkedList;
 
@@ -58,17 +55,18 @@ typedef struct _EmacsRimeCandidates {
   CandidateLinkedList *list;
 } EmacsRimeCandidates;
 
-void notification_handler(void *context,
-                          RimeSessionId session_id,
-                          const char *message_type,
-                          const char *message_value) {
+void notification_handler(void *context, RimeSessionId session_id,
+                          const char *message_type, const char *message_value) {
   /* EmacsRime *rime = (EmacsRime*) context; */
   /* emacs_env *env = rime->EmacsEnv; */
   /* char format[] = "[liberime] %s: %s"; */
   /* emacs_value args[3]; */
-  /* args[0] = env->make_string(env, format, strnlen(format, SCHEMA_MAXSTRLEN)); */
-  /* args[1] = env->make_string(env, message_type, strnlen(message_type, SCHEMA_MAXSTRLEN)); */
-  /* args[2] = env->make_string(env, message_value, strnlen(message_value, SCHEMA_MAXSTRLEN)); */
+  /* args[0] = env->make_string(env, format, strnlen(format, SCHEMA_MAXSTRLEN));
+   */
+  /* args[1] = env->make_string(env, message_type, strnlen(message_type,
+   * SCHEMA_MAXSTRLEN)); */
+  /* args[2] = env->make_string(env, message_value, strnlen(message_value,
+   * SCHEMA_MAXSTRLEN)); */
   /* env->funcall(env, env->intern (env, "message"), 3, args); */
 }
 
@@ -86,26 +84,31 @@ static bool _ensure_session(EmacsRime *rime) {
 
 static char *_copy_string(char *str) {
   if (str) {
-     size_t size = strnlen(str, CANDIDATE_MAXSTRLEN);
-     char *new_str = malloc(size+1);
-     strncpy(new_str, str, size);
-     new_str[size] = '\0';
-     return new_str;
+    size_t size = strnlen(str, CANDIDATE_MAXSTRLEN);
+    char *new_str = malloc(size + 1);
+    strncpy(new_str, str, size);
+    new_str[size] = '\0';
+    return new_str;
   } else {
     return NULL;
   }
 }
 
 EmacsRimeCandidates _get_candidates(EmacsRime *rime, size_t limit) {
-  EmacsRimeCandidates c = {.size=0, .list=(CandidateLinkedList *)malloc(sizeof(CandidateLinkedList))};
+  EmacsRimeCandidates c = {
+      .size = 0,
+      .list = (CandidateLinkedList *)malloc(sizeof(CandidateLinkedList))};
 
   RimeCandidateListIterator iterator = {0};
   CandidateLinkedList *next = c.list;
   if (rime->api->candidate_list_begin(rime->session_id, &iterator)) {
-    while (rime->api->candidate_list_next(&iterator) && (limit == 0 || c.size < limit)) {
+    while (rime->api->candidate_list_next(&iterator) &&
+           (limit == 0 || c.size < limit)) {
       c.size += 1;
 
-      next->value = _copy_string(iterator.candidate.text);
+      next->text = _copy_string(iterator.candidate.text);
+      next->comment = _copy_string(iterator.candidate.comment);
+
       next->next = (CandidateLinkedList *)malloc(sizeof(CandidateLinkedList));
 
       next = next->next;
@@ -118,10 +121,10 @@ EmacsRimeCandidates _get_candidates(EmacsRime *rime, size_t limit) {
 }
 
 // bindings
-DOCSTRING(start, "SHARED_DATA_DIR USER_DATA_DIR",
-          "Start a rime session.");
-static emacs_value start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+DOCSTRING(start, "SHARED_DATA_DIR USER_DATA_DIR", "Start a rime session.");
+static emacs_value start(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
+                         void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
 
   char *shared_data_dir = em_get_string(env, em_expand_file_name(env, args[0]));
   char *user_data_dir = em_get_string(env, em_expand_file_name(env, args[1]));
@@ -152,8 +155,9 @@ static emacs_value start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], vo
 }
 
 DOCSTRING(finalize, "", "Finalize librime for redeploy.");
-static emacs_value finalize(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+static emacs_value finalize(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
+                            void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
   if (rime->session_id) {
     rime->session_id = 0;
   }
@@ -178,9 +182,10 @@ void free_candidate_list(CandidateLinkedList *list) {
 DOCSTRING(search, "STRING &optional LIMIT",
           "Input STRING and return LIMIT number candidates.\n"
           "When LIMIT is nil, return all candidates.");
-static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
-  char* string = em_get_string(env, args[0]);
+static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
+                          void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
+  char *string = em_get_string(env, args[0]);
 
   size_t limit = 0;
   if (nargs == 2) {
@@ -211,19 +216,23 @@ static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], v
     return em_nil;
   }
 
-  emacs_value* array = malloc(sizeof(emacs_value) * candidates.size);
+  emacs_value *array = malloc(sizeof(emacs_value) * candidates.size);
 
   CandidateLinkedList *next = candidates.list;
   int i = 0;
   while (next && i < candidates.size) {
-    const char *value = next->value;
-    array[i++] = env->make_string(env, value, strlen(value));
+    emacs_value value = env->make_string(env, next->text, strlen(next->text));
+    if (next->comment) {
+      emacs_value comment =
+          env->make_string(env, next->comment, strlen(next->comment));
+      value = em_propertize(env, value, ":comment", comment);
+    }
+    array[i++] = value;
     next = next->next;
   }
   // printf("conveted array size: %d\n", i);
 
-  emacs_value flist = env->intern(env, "list");
-  emacs_value result = env->funcall(env, flist, candidates.size, array);
+  emacs_value result = em_list(env, candidates.size, array);
 
   // free(candidates.candidates);
   free_candidate_list(candidates.list);
@@ -234,8 +243,9 @@ static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[], v
 }
 
 DOCSTRING(get_sync_dir, "", "Get rime sync directory.");
-static emacs_value get_sync_dir(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+static emacs_value get_sync_dir(emacs_env *env, ptrdiff_t nargs,
+                                emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
     return em_nil;
@@ -246,8 +256,9 @@ static emacs_value get_sync_dir(emacs_env *env, ptrdiff_t nargs, emacs_value arg
 }
 
 DOCSTRING(sync_user_data, "", "Sync rime user data.");
-static emacs_value sync_user_data(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+static emacs_value sync_user_data(emacs_env *env, ptrdiff_t nargs,
+                                  emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
     return em_nil;
@@ -258,8 +269,9 @@ static emacs_value sync_user_data(emacs_env *env, ptrdiff_t nargs, emacs_value a
 }
 
 DOCSTRING(get_schema_list, "", "List all rime schema.");
-static emacs_value get_schema_list(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+static emacs_value get_schema_list(emacs_env *env, ptrdiff_t nargs,
+                                   emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
     return em_nil;
@@ -276,8 +288,10 @@ static emacs_value get_schema_list(emacs_env *env, ptrdiff_t nargs, emacs_value 
   for (int i = 0; i < schema_list.size; i++) {
     RimeSchemaListItem item = schema_list.list[i];
     emacs_value pair[2];
-    pair[0] = env->make_string(env, item.schema_id, strnlen(item.schema_id, SCHEMA_MAXSTRLEN));
-    pair[1] = env->make_string(env, item.name, strnlen(item.name, SCHEMA_MAXSTRLEN));
+    pair[0] = env->make_string(env, item.schema_id,
+                               strnlen(item.schema_id, SCHEMA_MAXSTRLEN));
+    pair[1] =
+        env->make_string(env, item.name, strnlen(item.name, SCHEMA_MAXSTRLEN));
 
     array[i] = env->funcall(env, flist, 2, pair);
   }
@@ -289,11 +303,13 @@ static emacs_value get_schema_list(emacs_env *env, ptrdiff_t nargs, emacs_value 
   return result;
 }
 
-DOCSTRING(select_schema, "SCHEMA_ID",
-            "Select a rime schema.\n"
-            "SCHENA_ID should be a value returned from `liberime-get-schema-list'.");
-static emacs_value select_schema(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+DOCSTRING(
+    select_schema, "SCHEMA_ID",
+    "Select a rime schema.\n"
+    "SCHENA_ID should be a value returned from `liberime-get-schema-list'.");
+static emacs_value select_schema(emacs_env *env, ptrdiff_t nargs,
+                                 emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
   const char *schema_id = em_get_string(env, args[0]);
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -307,9 +323,11 @@ static emacs_value select_schema(emacs_env *env, ptrdiff_t nargs, emacs_value ar
 }
 
 // input
-DOCSTRING(process_key, "KEYCODE &optional MASK", "Send KEYCODE to rime session and process it.");
-static emacs_value process_key(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+DOCSTRING(process_key, "KEYCODE &optional MASK",
+          "Send KEYCODE to rime session and process it.");
+static emacs_value process_key(emacs_env *env, ptrdiff_t nargs,
+                               emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
 
   int keycode = env->extract_integer(env, args[0]);
   int mask = 0;
@@ -329,15 +347,16 @@ static emacs_value process_key(emacs_env *env, ptrdiff_t nargs, emacs_value args
 }
 
 DOCSTRING(get_input, "", "Get rime input.");
-static emacs_value get_input(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+static emacs_value get_input(emacs_env *env, ptrdiff_t nargs,
+                             emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
 
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
     return em_nil;
   }
 
-  const char* input = rime->api->get_input(rime->session_id);
+  const char *input = rime->api->get_input(rime->session_id);
 
   if (!input) {
     return em_nil;
@@ -347,8 +366,9 @@ static emacs_value get_input(emacs_env *env, ptrdiff_t nargs, emacs_value args[]
 }
 
 DOCSTRING(commit_composition, "", "Commit rime composition.");
-static emacs_value commit_composition(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+static emacs_value commit_composition(emacs_env *env, ptrdiff_t nargs,
+                                      emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
 
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -362,8 +382,9 @@ static emacs_value commit_composition(emacs_env *env, ptrdiff_t nargs, emacs_val
 }
 
 DOCSTRING(clear_composition, "", "Clear rime composition.");
-static emacs_value clear_composition(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+static emacs_value clear_composition(emacs_env *env, ptrdiff_t nargs,
+                                     emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
 
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -375,8 +396,9 @@ static emacs_value clear_composition(emacs_env *env, ptrdiff_t nargs, emacs_valu
 }
 
 DOCSTRING(select_candidate, "NUM", "Select a rime candidate by NUM.");
-static emacs_value select_candidate(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+static emacs_value select_candidate(emacs_env *env, ptrdiff_t nargs,
+                                    emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
 
   int index = env->extract_integer(env, args[0]);
 
@@ -389,8 +411,9 @@ static emacs_value select_candidate(emacs_env *env, ptrdiff_t nargs, emacs_value
 // output
 
 DOCSTRING(get_commit, "", "Get rime commit.");
-static emacs_value get_commit(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+static emacs_value get_commit(emacs_env *env, ptrdiff_t nargs,
+                              emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
 
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -414,8 +437,9 @@ static emacs_value get_commit(emacs_env *env, ptrdiff_t nargs, emacs_value args[
 }
 
 DOCSTRING(get_context, "", "Get rime context.");
-static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+static emacs_value get_context(emacs_env *env, ptrdiff_t nargs,
+                               emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
 
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -423,7 +447,7 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
   }
 
   RIME_STRUCT(RimeContext, context);
-  if (!rime->api->get_context(rime->session_id, &context)){
+  if (!rime->api->get_context(rime->session_id, &context)) {
     em_signal_rimeerr(env, 2, "Cannot get context.");
     return em_nil;
   }
@@ -453,27 +477,37 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
     // When we don't have a preedit,
     // The composition should be nil.
     return em_nil;
-    /* composition_array[4] = CONS_NIL("preedit"); */
+  /* composition_array[4] = CONS_NIL("preedit"); */
 
-  emacs_value composition_value = em_list(env, composition_size, composition_array);
+  emacs_value composition_value =
+      em_list(env, composition_size, composition_array);
   result_array[1] = CONS_VALUE("composition", composition_value);
 
   // 3. context.menu
   if (context.menu.num_candidates) {
     size_t menu_size = 6;
     emacs_value menu_array[menu_size];
-    menu_array[0] = CONS_INT("highlighted-candidate-index", context.menu.highlighted_candidate_index);
-    menu_array[1] = CONS_VALUE("last-page-p", context.menu.is_last_page ? em_t : em_nil);
+    menu_array[0] = CONS_INT("highlighted-candidate-index",
+                             context.menu.highlighted_candidate_index);
+    menu_array[1] =
+        CONS_VALUE("last-page-p", context.menu.is_last_page ? em_t : em_nil);
     menu_array[2] = CONS_INT("num-candidates", context.menu.num_candidates);
     menu_array[3] = CONS_INT("page-no", context.menu.page_no);
     menu_array[4] = CONS_INT("page-size", context.menu.page_size);
     emacs_value carray[context.menu.num_candidates];
     // Build candidates
     for (int i = 0; i < context.menu.num_candidates; i++) {
-      RimeCandidate c = context.menu.candidates[i];
-      char *ctext = _copy_string(c.text);
-      carray[i] = env->make_string(env, ctext, strlen(ctext));
+      RimeCandidate candidate = context.menu.candidates[i];
+
+      emacs_value value = em_string(env, candidate.text);
+      if (candidate.comment) {
+        emacs_value comment = em_string(env, candidate.comment);
+        value = em_propertize(env, value, ":comment", comment);
+      }
+
+      carray[i] = value;
     }
+
     emacs_value candidates = em_list(env, context.menu.num_candidates, carray);
     menu_array[5] = CONS_VALUE("candidates", candidates);
     emacs_value menu = em_list(env, menu_size, menu_array);
@@ -491,8 +525,9 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs, emacs_value args
 }
 
 DOCSTRING(get_status, "", "Get rime status.");
-static emacs_value get_status(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+static emacs_value get_status(emacs_env *env, ptrdiff_t nargs,
+                              emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
 
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -500,7 +535,7 @@ static emacs_value get_status(emacs_env *env, ptrdiff_t nargs, emacs_value args[
   }
 
   RIME_STRUCT(RimeStatus, status);
-  if (!rime->api->get_status(rime->session_id, &status)){
+  if (!rime->api->get_status(rime->session_id, &status)) {
     em_signal_rimeerr(env, 2, "Cannot get status.");
     return em_nil;
   }
@@ -520,13 +555,20 @@ static emacs_value get_status(emacs_env *env, ptrdiff_t nargs, emacs_value args[
   else
     result_array[1] = CONS_NIL("schema_name");
 
-  result_array[2] = CONS_VALUE("is_disabled", status.is_disabled ? em_t : em_nil);
-  result_array[3] = CONS_VALUE("is_composing", status.is_composing ? em_t : em_nil);
-  result_array[4] = CONS_VALUE("is_ascii_mode", status.is_ascii_mode ? em_t : em_nil);
-  result_array[5] = CONS_VALUE("is_full_shape", status.is_full_shape ? em_t : em_nil);
-  result_array[6] = CONS_VALUE("is_simplified", status.is_simplified ? em_t : em_nil);
-  result_array[7] = CONS_VALUE("is_traditional", status.is_traditional ? em_t : em_nil);
-  result_array[8] = CONS_VALUE("is_ascii_punct", status.is_ascii_punct ? em_t : em_nil);
+  result_array[2] =
+      CONS_VALUE("is_disabled", status.is_disabled ? em_t : em_nil);
+  result_array[3] =
+      CONS_VALUE("is_composing", status.is_composing ? em_t : em_nil);
+  result_array[4] =
+      CONS_VALUE("is_ascii_mode", status.is_ascii_mode ? em_t : em_nil);
+  result_array[5] =
+      CONS_VALUE("is_full_shape", status.is_full_shape ? em_t : em_nil);
+  result_array[6] =
+      CONS_VALUE("is_simplified", status.is_simplified ? em_t : em_nil);
+  result_array[7] =
+      CONS_VALUE("is_traditional", status.is_traditional ? em_t : em_nil);
+  result_array[8] =
+      CONS_VALUE("is_ascii_punct", status.is_ascii_punct ? em_t : em_nil);
 
   // build result
   emacs_value result = em_list(env, result_size, result_array);
@@ -536,12 +578,12 @@ static emacs_value get_status(emacs_env *env, ptrdiff_t nargs, emacs_value args[
   return result;
 }
 
-
 DOCSTRING(get_user_config, "USER-CONFIG OPTION &optional RETURN-VALUE-TYPE",
           "Get OPTION of rime USER-CONFIG.\n"
           "The return value type can be set with RETURN-VALUE-TYPE.");
-static emacs_value get_user_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+static emacs_value get_user_config(emacs_env *env, ptrdiff_t nargs,
+                                   emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
 
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -563,8 +605,8 @@ static emacs_value get_user_config(emacs_env *env, ptrdiff_t nargs, emacs_value 
   RimeConfig *config = malloc(sizeof(RimeConfig));
   // 注意user_config_open是从user_data_dir下获取
   if (!rime->api->user_config_open(config_id, config)) {
-        em_signal_rimeerr(env, 2, "Failed to open user config file.");
-      return em_nil;
+    em_signal_rimeerr(env, 2, "Failed to open user config file.");
+    return em_nil;
   }
 
   bool success = false;
@@ -600,8 +642,9 @@ static emacs_value get_user_config(emacs_env *env, ptrdiff_t nargs, emacs_value 
 DOCSTRING(set_user_config, "USER-CONFIG OPTION VALUE &optional VALUE-TYPE",
           "Set rime USER-CONFIG OPTION to VALUE.\n"
           "When VALUE-TYPE is non-nil, VALUE will be converted to this type.");
-static emacs_value set_user_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+static emacs_value set_user_config(emacs_env *env, ptrdiff_t nargs,
+                                   emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
 
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -643,12 +686,12 @@ static emacs_value set_user_config(emacs_env *env, ptrdiff_t nargs, emacs_value 
   return em_t;
 }
 
-
 DOCSTRING(get_schema_config, "SCHEMA-CONFIG OPTION &optional RETURN-VALUE-TYPE",
           "Get OPTION of rime SCHEMA-CONFIG.\n"
           "The return value type can be set with RETURN-VALUE-TYPE.");
-static emacs_value get_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+static emacs_value get_schema_config(emacs_env *env, ptrdiff_t nargs,
+                                     emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
 
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -660,14 +703,15 @@ static emacs_value get_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
     return em_nil;
   }
 
-  const char *arg0  = em_get_string(env, args[0]);
+  const char *arg0 = em_get_string(env, args[0]);
   const int max_schema_length = 0xff;
   char *schema_id = (char *)malloc(max_schema_length * sizeof(char));
   memset(schema_id, 0, max_schema_length);
-    if (arg0 == NULL || strlen(arg0) == 0) {
-        if (!rime->api->get_current_schema(rime->session_id, schema_id, max_schema_length)) {
-        em_signal_rimeerr(env, 2, "error get current schema");
-        return em_nil;
+  if (arg0 == NULL || strlen(arg0) == 0) {
+    if (!rime->api->get_current_schema(rime->session_id, schema_id,
+                                       max_schema_length)) {
+      em_signal_rimeerr(env, 2, "error get current schema");
+      return em_nil;
     }
   } else {
     if (strlen(arg0) > max_schema_length) {
@@ -692,9 +736,9 @@ static emacs_value get_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
 
   RimeConfig *config = malloc(sizeof(RimeConfig));
   if (!rime->api->schema_open(schema_id, config)) {
-      free(schema_id);
-      em_signal_rimeerr(env, 2, "Failed to open schema config file.");
-      return em_nil;
+    free(schema_id);
+    em_signal_rimeerr(env, 2, "Failed to open schema config file.");
+    return em_nil;
   }
 
   free(schema_id);
@@ -732,8 +776,9 @@ static emacs_value get_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
 DOCSTRING(set_schema_config, "CONFIG OPTION VALUE &optional VALUE-TYPE",
           "Set rime SCHEMA-CONFIG OPTION to VALUE.\n"
           "When VALUE-TYPE is non-nil, VALUE will be converted to this type.");
-static emacs_value set_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  EmacsRime *rime = (EmacsRime*) data;
+static emacs_value set_schema_config(emacs_env *env, ptrdiff_t nargs,
+                                     emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
 
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
@@ -743,14 +788,15 @@ static emacs_value set_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
     em_signal_rimeerr(env, 2, "Invalid arguments.");
   }
 
-  const char *arg0  = em_get_string(env, args[0]);
+  const char *arg0 = em_get_string(env, args[0]);
   const int max_schema_length = 0xff;
   char *schema_id = (char *)malloc(max_schema_length * sizeof(char));
   memset(schema_id, 0, max_schema_length);
-    if (arg0 == NULL || strlen(arg0) == 0) {
-        if (!rime->api->get_current_schema(rime->session_id, schema_id, max_schema_length)) {
-        em_signal_rimeerr(env, 2, "Error get current schema.");
-        return em_nil;
+  if (arg0 == NULL || strlen(arg0) == 0) {
+    if (!rime->api->get_current_schema(rime->session_id, schema_id,
+                                       max_schema_length)) {
+      em_signal_rimeerr(env, 2, "Error get current schema.");
+      return em_nil;
     }
   } else {
     if (strlen(arg0) > max_schema_length) {
@@ -776,9 +822,9 @@ static emacs_value set_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
 
   RimeConfig *config = (RimeConfig *)malloc(sizeof(RimeConfig));
   if (!rime->api->schema_open(schema_id, config)) {
-      free(schema_id);
-      em_signal_rimeerr(env, 2, "Failed to open schema config file.");
-      return em_nil;
+    free(schema_id);
+    em_signal_rimeerr(env, 2, "Failed to open schema config file.");
+    return em_nil;
   }
 
   free(schema_id);
@@ -803,7 +849,7 @@ static emacs_value set_schema_config(emacs_env *env, ptrdiff_t nargs, emacs_valu
 void liberime_init(emacs_env *env) {
   // Name 'rime' is hardcode in DEFUN micro, so if you edit here,
   // you should edit DEFUN micro too.
-  EmacsRime *rime = (EmacsRime*) malloc(sizeof(EmacsRime));
+  EmacsRime *rime = (EmacsRime *)malloc(sizeof(EmacsRime));
 
   rime->api = rime_get_api();
   rime->first_run = true; // not used yet

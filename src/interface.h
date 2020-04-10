@@ -31,7 +31,7 @@ bool em_assert(emacs_env *env, emacs_value predicate, emacs_value arg);
  * @param _klass The error code.
  * @param _msg The error message.
  */
-void em_signal_rimeerr(emacs_env *env, int _klass, const char* _msg);
+void em_signal_rimeerr(emacs_env *env, int _klass, const char *_msg);
 
 /**
  * Signal a wrong-type-argument error.
@@ -39,7 +39,8 @@ void em_signal_rimeerr(emacs_env *env, int _klass, const char* _msg);
  * @param expected Symbol describing the expected type.
  * @param actual Emacs value that does not have the expected type.
  */
-void em_signal_wrong_type(emacs_env *env, emacs_value expected, emacs_value actual);
+void em_signal_wrong_type(emacs_env *env, emacs_value expected,
+                          emacs_value actual);
 
 /**
  * Signal a wrong-value-argument error.
@@ -50,7 +51,8 @@ void em_signal_wrong_value(emacs_env *env, emacs_value actual);
 
 /**
  * Return a string from an emacs_value.
- * Caller is responsible for ensuring that the value is a string, and to free the returned pointer.
+ * Caller is responsible for ensuring that the value is a string, and to free
+ * the returned pointer.
  * @param env The active Emacs environment.
  * @param arg Emacs value representing a string.
  * @return The string (owned pointer).
@@ -104,7 +106,39 @@ void em_provide(emacs_env *env, const char *feature);
  */
 bool em_user_ptrp(emacs_env *env, emacs_value val);
 
+/**
+ * make a Emacs list with array
+ * @param env the active Emacs enviroment.
+ * @param size size of the array.
+ * @param array pointer.
+ * @return emacs_value represent the list.
+ */
+emacs_value em_list(emacs_env *env, ptrdiff_t size, emacs_value *array);
 
-emacs_value em_list(emacs_env *env, ptrdiff_t array_size, emacs_value* array);
+/**
+ * propertize the value
+ * @param env the active Emacs enviroment.
+ * @param target the propertize target.
+ * @param key property key.
+ * @param value property value.
+ * @return propertized value of param value.
+ */
+emacs_value em_propertize(emacs_env *env, emacs_value target, const char *key,
+                          emacs_value value);
+/**
+ * make a Emacs symbol with string.
+ * @param env the active Emacs enviroment.
+ * @param str string that to be a symbol.
+ * @return emacs_value represents a symbol.
+ */
+emacs_value em_symbol(emacs_env *env, const char *str);
+
+/**
+ * make a Emacs string with string, always copy it, so it's safe to free *src.
+ * @param env the active Emacs enviroment.
+ * @param str string that to be convert to emacs string.
+ * @return emacs_value represents a emacs string.
+ */
+emacs_value em_string(emacs_env *env, char *str);
 
 #endif /* INTERFACE_H */
