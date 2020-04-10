@@ -8,6 +8,8 @@
 #define GLOBREF(val) env->make_global_ref(env, (val))
 #define INTERN(val) env->intern(env, (val))
 
+#define MAX_STRLEN 1024
+
 // We store some globa references to emacs objects, mostly symbols,
 // so that we don't have to waste time calling intern later on.
 
@@ -139,6 +141,18 @@ emacs_value em_list(emacs_env *env, ptrdiff_t array_size, emacs_value *array) {
 emacs_value em_propertize(emacs_env *env, emacs_value target, const char *key,
                           emacs_value value) {
   return em_funcall(env, _propertize, 3, target, INTERN(key), value);
+}
+
+emacs_value em_string(emacs_env *env, char *str) {
+  // always copy string
+  if (str) {
+    size_t size = strnlen(str, MAX_STRLEN);
+    char *new_str = malloc(size + 1);
+    strncpy(new_str, str, size);
+    return env->make_string(env, new_str, size);
+  } else {
+    return em_nil;
+  }
 }
 
 emacs_value em_symbol(emacs_env *env, const char *str) { INTERN(str); }

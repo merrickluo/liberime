@@ -499,11 +499,9 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs,
     for (int i = 0; i < context.menu.num_candidates; i++) {
       RimeCandidate candidate = context.menu.candidates[i];
 
-      emacs_value value =
-          env->make_string(env, candidate.text, strlen(candidate.text));
+      emacs_value value = em_string(env, candidate.text);
       if (candidate.comment) {
-        emacs_value comment =
-            env->make_string(env, candidate.comment, strlen(candidate.comment));
+        emacs_value comment = em_string(env, candidate.comment);
         value = em_propertize(env, value, ":comment", comment);
       }
 

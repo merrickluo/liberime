@@ -133,4 +133,12 @@ emacs_value em_propertize(emacs_env *env, emacs_value target, const char *key,
  */
 emacs_value em_symbol(emacs_env *env, const char *str);
 
+/**
+ * make a Emacs string with string, always copy it, so it's safe to free *src.
+ * @param env the active Emacs enviroment.
+ * @param str string that to be convert to emacs string.
+ * @return emacs_value represents a emacs string.
+ */
+emacs_value em_string(emacs_env *env, char *str);
+
 #endif /* INTERFACE_H */
