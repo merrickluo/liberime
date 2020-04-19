@@ -40,6 +40,11 @@ More info: https://github.com/rime/home/wiki/SharedData"
   :group 'liberime
   :type 'file)
 
+(defcustom liberime-auto-build nil
+  "If set to t, try build when module file not found in the system."
+  :group 'liberime
+  :type 'boolean)
+
 (defvar liberime-message
   "Liberime can not load properly, please check:
 1. Does your emacs support dynamic module?
@@ -202,13 +207,15 @@ if NAMES is nil, \"rime-data\" as fallback."
       (unless (featurep 'liberime-core)
         (load-file (liberime-get-module-file)))))
   (if (not (featurep 'liberime-core))
-      (when (> (length liberime-message) 0)
-        (let ((buf (get-buffer-create "*liberime message*")))
-          (with-current-buffer buf
-            (erase-buffer)
-            (insert liberime-message)
-            (goto-char (point-min)))
-          (pop-to-buffer buf)))
+      (if liberime-auto-build
+          (liberime-build)
+        (when (> (length liberime-message) 0)
+          (let ((buf (get-buffer-create "*liberime message*")))
+            (with-current-buffer buf
+              (erase-buffer)
+              (insert liberime-message)
+              (goto-char (point-min)))
+            (pop-to-buffer buf))))
     (liberime--start)))
 
 (liberime-load)
