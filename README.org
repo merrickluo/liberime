@@ -83,6 +83,12 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
    1. liberime-shared-data-dir
    2. liberime-user-data-dir
 
+*** 加载时自动编译
+#+BEGIN_SRC emacs-lisp
+(let ((liberime-auto-build t))
+  (require 'liberime nil t))
+#+END_SRC
+
 ** 部署 Rime
 
 手动修改 librime 配置后，可以调用 ~(liberime-deploy)~ 重新部署。
