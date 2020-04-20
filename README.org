@@ -72,14 +72,14 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
   (setq pyim-default-scheme 'rime-quanpin))
 #+END_SRC
 
-除了使用这个 hook 来选择 schema，用户也可以通过 Rime 配置文件 (默认
-为：~/.emacs.d/rime/default.custom.yaml) 来设置默认 schema，设置方式可
-以参考：https://gist.github.com/merrickluo/553f39c131d0eb717cd59f72c9d4b60d
+用户也可以通过 Rime 配置文件 (默认为：~/.emacs.d/rime/default.custom.yaml) 
+来设置默认 schema，设置方式可以参考：
+https://gist.github.com/merrickluo/553f39c131d0eb717cd59f72c9d4b60d
 
 注意事项：
 1. 一般情况下，liberime 和 [[https://github.com/tumashu/pyim][pyim]] 配合使用
-2. 默认情况下，liberime 会自动搜索 rime 共享数据（shared_data_dir）和
-   rime 用户数据（user_data_dir）, 用户可以使用下面两个变量强制设置：
+2. 默认情况下，liberime 会自动搜索 rime 共享数据目录（shared_data_dir）和
+   rime 用户数据目录（user_data_dir）, 用户也可以使用下面两个变量强制设置：
    1. liberime-shared-data-dir
    2. liberime-user-data-dir
 
