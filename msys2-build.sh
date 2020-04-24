@@ -126,7 +126,7 @@ function archive_liberime() {
     ## 复制 liberime-core.dll 和它的所有依赖
     mkdir -p ${temp_bin_dir} 
     cp build/liberime-core.dll ${temp_bin_dir}
-    cp "${INSTALL_PREFIX}/lib/librime.dll" ${temp_bin_dir}
+    cp "${INSTALL_PREFIX}/bin/librime.dll" ${temp_bin_dir}
     copy_all_dll "${temp_bin_dir}/librime.dll" ${temp_bin_dir} "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
 
     ## strip all dll
