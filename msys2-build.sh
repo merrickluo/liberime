@@ -14,19 +14,6 @@ PACKAGE_PREFIX="${MINGW_PACKAGE_PREFIX}"
 # 安装位置
 INSTALL_PREFIX="${MINGW_PREFIX}"
 
-# git 协议
-GIT_PROTOCOL="ssh"
-GIT_PROTOCOL_URL="https://github.com/"
-
-# 重新编译所有
-REBUILD_ALL=""
-
-# job 数量
-JOB_NUMBER=1
-
-# 激活 rime log
-RIME_ENABLE_LOG="OFF"
-
 # rime-data
 RIME_DATA_DIR="${MINGW_PREFIX}/share/rime-data"
 
@@ -35,28 +22,6 @@ ARCHIVE_DIR="/d/liberime-archive"
 
 # travis name
 TRAVIS_ARCHIVE_NAME=""
-
-function repeatcmd() {
-    set +e
-    count=0
-    while [ 0 -eq 0 ]
-    do
-        echo "Run $@ ..."
-        $@
-        if [ $? -eq 0 ]; then
-            break;
-        else
-            count=$[${count}+1]
-            if [ ${count} -eq 50 ]; then
-                echo 'Timeout and exit.'
-                exit 1;
-            fi
-            echo "Retry ..."
-            sleep 3
-        fi
-    done
-    set -e
-}
 
 #######################################
 # 复制所有dll依赖到指定目录
@@ -105,106 +70,18 @@ function install_deps() {
         ${PACKAGE_PREFIX}-boost
         ${PACKAGE_PREFIX}-glog
         ${PACKAGE_PREFIX}-yaml-cpp
+        ${PACKAGE_PREFIX}-leveldb
+        ${PACKAGE_PREFIX}-marisa
+        ${PACKAGE_PREFIX}-opencc
+        ${PACKAGE_PREFIX}-librime
+        ${PACKAGE_PREFIX}-librime-data
     )
-    pacman -S --needed --noconfirm ${dep_packages[@]}
-}
-
-# 编译 leveldb
-function build_leveldb() {
-    echo ""
-    echo "########## Build and install leveldb ##########"
-    if [[ ! -d "leveldb" ]]; then
-        repeatcmd git clone --depth 1 "${GIT_PROTOCOL_URL}google/leveldb.git"
-    fi
-    pushd leveldb
-    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DLEVELDB_BUILD_TESTS=OFF -DLEVELDB_BUILD_BENCHMARKS=OFF
-    cmake --build build --config Release --target install -j ${JOB_NUMBER}
-    popd
-}
-
-# 编译 marisa
-function build_marisa() {
-    echo ""
-    echo "########## Build and install marisa-tries ##########"
-    if [[ ! -d "marisa-trie" ]]; then
-        repeatcmd git clone --depth 1 "${GIT_PROTOCOL_URL}s-yata/marisa-trie.git"
-    fi
-    pushd marisa-trie
-    autoreconf -i
-    if [[ "${ARCH}" == "x86_64" ]]; then
-        ./configure --enable-native-code --disable-shared --prefix="${INSTALL_PREFIX}"
-    else
-        ./configure  --disable-shared --prefix="${INSTALL_PREFIX}"
-    fi
-    make -j ${JOB_NUMBER} && make install
-    popd
-}
-
-# 编译 OpenCC
-function build_opencc() {
-    echo ""
-    echo "########## Build and install opencc ##########"
-    if [[ ! -d "OpenCC" ]]; then
-        repeatcmd git clone --depth 1 "${GIT_PROTOCOL_URL}BYVoid/OpenCC.git"
-    fi
-    pushd OpenCC
-    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DENABLE_GTEST=OFF -DBUILD_SHARED_LIBS=OFF
-    cmake --build build --config Release --target install
-    popd
-}
-
-# 编译 librime
-function build_librime() {
-    echo ""
-    echo "########## Build and install librime ##########"
-    if [[ ! -d "librime" ]]; then
-        repeatcmd git clone  --depth 1 "${GIT_PROTOCOL_URL}rime/librime.git"
-    fi
-    pushd librime
-    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DBUILD_TEST=OFF -DBOOST_USE_CXX11=ON -DBUILD_STATIC=ON -DENABLE_LOGGING="${RIME_ENABLE_LOG}" -DCMAKE_CXX_STANDARD_LIBRARIES="-lbcrypt"
-    cmake --build build --config Release --target install -j ${JOB_NUMBER}
-    # liberime 通过 PATH 环境变量寻找 librime.dll, 将 librime.dll 复制到 bin, 就
-    # 不需要用户自己设置 PATH 环境变量了。
-    cp -f "${INSTALL_PREFIX}/lib/librime.dll" "${INSTALL_PREFIX}/bin/"
-    popd
-}
-
-# 安装 rime-data
-function install_rime_data() {
-    echo ""
-    echo "########## Install rime data from plum.git ##########"
-
-    rm -rf $RIME_DATA_DIR
-    mkdir -p "$RIME_DATA_DIR"/opencc
-    cp -r "${INSTALL_PREFIX}/share/opencc" "$RIME_DATA_DIR"/
-
-    if [[ ! -d "plum" ]]; then
-        repeatcmd git clone --depth 1 "${GIT_PROTOCOL_URL}rime/plum.git"
-    fi
-    pushd plum
-    export rime_dir="$RIME_DATA_DIR"
-    repeatcmd bash rime-install
-    popd
+    pacman -S --overwrite "*" --needed --noconfirm ${dep_packages[@]}
 }
 
 # 编译 liberime
 function build_liberime() {
-    if [[ ! -n "${REBUILD_ALL}" ]] && [[ -f "${INSTALL_PREFIX}/lib/librime.dll" ]]; then
-        echo "Note: ONLY rebuild liberime-core, Use --rebuildall to build all dependences."
-    else
-        install_deps
-        if [[ ! -d "third_party_build" ]]; then
-            mkdir third_party_build
-        fi
-        # 编译第三方依赖
-        pushd third_party_build
-        build_leveldb
-        build_marisa
-        build_opencc
-        build_librime
-        install_rime_data
-        popd
-    fi
+    install_deps
 
     echo ""
     echo "########## Build and install liberime ##########"
@@ -214,7 +91,7 @@ function build_liberime() {
     rm -f build/liberime-core.dll
 
     cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}"
-    cmake --build build --config Release -j ${JOB_NUMBER}
+    cmake --build build --config Release
     
     echo ""
     echo "Build liberime Finished!!!"
@@ -244,8 +121,7 @@ function archive_liberime() {
     ## 复制 el 文件
     mkdir -p ${temp_site_lisp_dir}
     cp liberime.el ${temp_site_lisp_dir}
-    cp liberime-config.el ${temp_site_lisp_dir}
-
+    
     ## 复制 liberime-core.dll 和它的所有依赖
     mkdir -p ${temp_bin_dir} 
     cp build/liberime-core.dll ${temp_bin_dir}
@@ -288,15 +164,7 @@ function display_usage() {
 
 选项:
 
-    -r, --rebuildall            是否重新编译所有库
-
     -t, --travis=FILENAME       travis 打包名
-
-    -p, --protocol=PROTOCOL     git clone 时用到的协议，https 或者 ssh 
-
-    -j, --job=JOB_NUMBER        编译时的 job 数
-
-    -l, --log                   激活 rime 的 log
 
     -h, --help                  查看帮助
 
@@ -310,22 +178,6 @@ function main() {
             -h|--help)
                 display_usage;
                 exit 0
-                ;;
-            -r|--rebuildall)
-                REBUILD_ALL="TRUE"
-                shift
-                ;;
-            -l|--log)
-                RIME_ENABLE_LOG="ON"
-                shift
-                ;;
-            -p|--protocol)
-                GIT_PROTOCOL="$2";
-                shift 2
-                ;;
-            -j|--job)
-                JOB_NUMBER="$2";
-                shift 2
                 ;;
             -t|--travis)
                 TRAVIS_ARCHIVE_NAME="$2";
@@ -341,22 +193,13 @@ function main() {
         esac
     done
 
-    if [[ "${GIT_PROTOCOL}" == "ssh" ]]; then
-        GIT_PROTOCOL_URL="git@github.com:"
-    elif [[ "${GIT_PROTOCOL}" == "https" ]]; then
-        GIT_PROTOCOL_URL="https://github.com/"
-    else
-        echo "错误的协议：使用 https 或 ssh"
-        exit 1
-    fi
-
     build_liberime
     archive_liberime
 
 }
 
 # 选项
-ARGS=$(getopt -o rhla:p:j:t: --long rebuildall,help,log,archive:,protocol:,job:,travis: -n "$0" -- "$@")
+ARGS=$(getopt -o ha:t: --long help,archive:,travis: -n "$0" -- "$@")
 
 
 if [[ $? != 0 ]]; then
