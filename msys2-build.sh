@@ -75,6 +75,7 @@ function install_deps() {
         ${PACKAGE_PREFIX}-opencc
         ${PACKAGE_PREFIX}-librime
         ${PACKAGE_PREFIX}-librime-data
+        ${PACKAGE_PREFIX}-liberime
     )
     pacman -S --overwrite "*" --needed --noconfirm ${dep_packages[@]}
 }
