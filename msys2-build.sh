@@ -129,9 +129,6 @@ function archive_liberime() {
     cp "${INSTALL_PREFIX}/bin/librime.dll" ${temp_bin_dir}
     copy_all_dll "${temp_bin_dir}/librime.dll" ${temp_bin_dir} "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
 
-    ## strip all dll
-    strip ${temp_bin_dir}/*
-
     ## 复制 rime-data
     mkdir -p ${temp_rime_data_dir}
     cp -r "${RIME_DATA_DIR}"/* ${temp_rime_data_dir}
