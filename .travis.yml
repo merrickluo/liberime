@@ -26,9 +26,8 @@ before_install:
     esac
 
 script:
-- $mingw64 bash msys2-build.sh -r --travis=liberime-$TRAVIS_TAG-windows-x86_64 --protocol=https
-- rm -rf build && rm -rf third_party_build
-- $mingw32 bash msys2-build.sh -r --travis=liberime-$TRAVIS_TAG-windows-i686 --protocol=https
+- $mingw64 bash msys2-build.sh -r --travis=liberime-$TRAVIS_TAG-windows-x86_64
+- $mingw32 bash msys2-build.sh -r --travis=liberime-$TRAVIS_TAG-windows-i686
 
 
 deploy:
