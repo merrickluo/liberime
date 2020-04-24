@@ -47,17 +47,9 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
    ./msys2-build.sh
    #+END_SRC
 
-4. =./msys2-build.sh= 命令有许多选项，可以使用下面的命令获取帮助
-
-   #+BEGIN_SRC shell
-   ./msys2-build.sh --help
-   #+END_SRC
-
 注意事项：
 
-1. =liberime-core.dll= 加载有时候会报错，遇到这种情况，首先应该检查环
-   境变量 =PATH= 的设置，确保 =librime.dll= 可以通过 PATH 找到。
-2. 如果你用的是 Windows msys2 编译的 liberime，不要将 shared_data_dir
+1. 如果你用的是 Windows msys2 编译的 liberime，不要将 shared_data_dir
    设置为小狼毫的 data 目录，因为小狼毫使用 MSVC 编译的，OpenCC 的
    .ocd 文件格式不同。
 
