@@ -18,7 +18,7 @@ INSTALL_PREFIX="${MINGW_PREFIX}"
 RIME_DATA_DIR="${MINGW_PREFIX}/share/rime-data"
 
 # Archive
-ARCHIVE_DIR="/d/liberime-archive"
+ARCHIVE_DIR="~/.emacs.d/liberime-archive"
 
 # travis name
 TRAVIS_ARCHIVE_NAME=""
@@ -70,12 +70,9 @@ function install_deps() {
         ${PACKAGE_PREFIX}-boost
         ${PACKAGE_PREFIX}-glog
         ${PACKAGE_PREFIX}-yaml-cpp
-        ${PACKAGE_PREFIX}-leveldb
-        ${PACKAGE_PREFIX}-marisa
-        ${PACKAGE_PREFIX}-opencc
-        ${PACKAGE_PREFIX}-librime
-        ${PACKAGE_PREFIX}-librime-data
         ${PACKAGE_PREFIX}-liberime
+        ${PACKAGE_PREFIX}-librime-data
+        ${PACKAGE_PREFIX}-rime-double-pinyin
     )
     pacman -S --overwrite "*" --needed --noconfirm ${dep_packages[@]}
 }
