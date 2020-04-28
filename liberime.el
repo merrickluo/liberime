@@ -68,9 +68,10 @@ More info: https://github.com/rime/home/wiki/SharedData"
 
 (defun liberime-get-library-directory ()
   "Return the liberime package direcory."
-  (file-name-directory
-   (or (locate-library "liberime")
-       (locate-library "liberime-config"))))
+  (let ((file (or (locate-library "liberime")
+                  (locate-library "liberime-config"))))
+    (when (and file (file-exists-p file))
+      (file-name-directory file))))
 
 (defun liberime-find-rime-data (parent-dirs &optional names)
   "Find directories listed in NAMES from PARENT-DIRS,
@@ -81,9 +82,9 @@ if NAMES is nil, \"rime-data\" as fallback."
                           (when (file-directory-p dir)
                             dir)))
                       (or names '("rime-data"))))
-           (if (fboundp 'xdg-data-dirs)
-               `(,@parent-dirs ,@(xdg-data-dirs))
-             parent-dirs)))
+           (remove nil (if (fboundp 'xdg-data-dirs)
+                           `(,@parent-dirs ,@(xdg-data-dirs))
+                         parent-dirs))))
 
 (defun liberime-get-shared-data-dir ()
   "Return user data directory"
@@ -98,9 +99,11 @@ if NAMES is nil, \"rime-data\" as fallback."
         ('windows-nt
          (liberime-find-rime-data
           (list
-           (expand-file-name
-            (concat (file-name-directory (executable-find "emacs"))
-                    "../share"))
+           (let ((file (executable-find "emacs")))
+             (when (and file (file-exists-p file))
+               (expand-file-name
+                (concat (file-name-directory file)
+                        "../share"))))
            "c:/" "d:/" "e:/" "f:/" "g:/")
           '("rime-data"
             "msys32/mingw32/share/rime-data"
