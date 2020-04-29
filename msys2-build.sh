@@ -56,37 +56,39 @@ function copy_all_dll() {
     IFS=$OLD_IFS
 }
 
+# 编译 liberime
+function build_liberime() {
 
-# 安装依赖
-function install_deps() {
     echo ""
     echo "########## Install build dependences ##########"
     local dep_packages=(
         base-devel
         zip
         git
-        ${PACKAGE_PREFIX}-cmake
         ${PACKAGE_PREFIX}-gcc
+        ${PACKAGE_PREFIX}-jsoncpp
+        ${PACKAGE_PREFIX}-cmake
+        ${PACKAGE_PREFIX}-cmake
         ${PACKAGE_PREFIX}-boost
         ${PACKAGE_PREFIX}-glog
         ${PACKAGE_PREFIX}-yaml-cpp
-        ${PACKAGE_PREFIX}-liberime
+        ${PACKAGE_PREFIX}-librime
         ${PACKAGE_PREFIX}-librime-data
+        ${PACKAGE_PREFIX}-rime-wubi
         ${PACKAGE_PREFIX}-rime-double-pinyin
     )
-    pacman -S --overwrite "*" --needed --noconfirm ${dep_packages[@]}
-}
 
-# 编译 liberime
-function build_liberime() {
-    install_deps
+    ## 不安装 liberime, 因为可能和自己编译的 liberime 产生版本冲突。
+    if pacman -Qs liberime; then
+        pacman -R --noconfirm ${PACKAGE_PREFIX}-liberime
+    fi
+
+    pacman -Sy --overwrite "*" --needed --noconfirm ${dep_packages[@]}
 
     echo ""
     echo "########## Build and install liberime ##########"
 
-    ## 删除 liberime-core.dll, 不然重新编译的时候，可能会导致 ld.exe 报类似：
-    ## "cannot open output file liberime-core.dll: Permission denied " 的错误。
-    rm -f build/liberime-core.dll
+    rm -rf build
 
     cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}"
     cmake --build build --config Release
