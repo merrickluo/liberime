@@ -88,10 +88,8 @@ function build_liberime() {
     echo ""
     echo "########## Build and install liberime ##########"
 
-    rm -rf build
-
-    cmake -H. -Bbuild -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}"
-    cmake --build build --config Release
+    make clean
+    make
     
     echo ""
     echo "Build liberime Finished!!!"
