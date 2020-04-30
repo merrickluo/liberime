@@ -6,19 +6,37 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
 个方法，理想情况是暴露所有 librime 的 API 到 emacs-lisp.
 
 * 依赖
+** 依赖说明
 1. Emacs 需要启用动态模块支持，一般是在编译的时候使用 --with-modules
    选项。
 2. librime 版本 > 1.3.2
 
+** Windows 系统下使用 msys2 安装依赖
+   #+BEGIN_SRC shell
+   pacman -Sy --overwrite "*" --needed           \
+          base-devel zip git                     \
+          ${MINGW_PACKAGE_PREFIX}-gcc            \
+          ${MINGW_PACKAGE_PREFIX}-jsoncpp        \
+          ${MINGW_PACKAGE_PREFIX}-cmake          \
+          ${MINGW_PACKAGE_PREFIX}-boost          \
+          ${MINGW_PACKAGE_PREFIX}-glog           \
+          ${MINGW_PACKAGE_PREFIX}-yaml-cpp       \
+          ${MINGW_PACKAGE_PREFIX}-librime        \
+          ${MINGW_PACKAGE_PREFIX}-librime-data   \
+          ${MINGW_PACKAGE_PREFIX}-rime-wubi      \
+          ${MINGW_PACKAGE_PREFIX}-rime-double-pinyin
+   #+END_SRC
+
+   将 opencc 包自带的文件拷贝到 rime-data/opencc 目录下，解决无法输入
+   简体中文的问题。
+   #+BEGIN_SRC shell
+   cp ${MINGW_PREFIX}/share/opencc/* ${MINGW_PREFIX}/share/rime-data/opencc/
+   #+END_SRC
 * 编译
 ** Linux 系统下编译 liberime:
 
    #+BEGIN_SRC shell
-   make liberime-core
-   ls build/
-
-   # try
-   make test
+   make
    #+END_SRC
 
 ** Mac (Darwin) 系统下编译 liberime:
@@ -31,11 +49,7 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
 3. 编译 liberime:
 
    #+BEGIN_SRC shell
-   make liberime-core
-   ls build/
-
-   # try
-   make test
+   make
    #+END_SRC
 
 ** Windows 系统下使用 msys2 编译 liberime
@@ -44,7 +58,7 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
 3. 运行下面的命令
 
    #+BEGIN_SRC shell
-   ./msys2-build.sh
+   make
    #+END_SRC
 
 注意事项：
