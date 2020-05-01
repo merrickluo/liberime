@@ -76,6 +76,7 @@ function build_liberime() {
         ${PACKAGE_PREFIX}-librime-data
         ${PACKAGE_PREFIX}-rime-wubi
         ${PACKAGE_PREFIX}-rime-double-pinyin
+        ${PACKAGE_PREFIX}-rime-emoji
     )
 
     ## 不安装 liberime, 因为可能和自己编译的 liberime 产生版本冲突。
@@ -129,10 +130,13 @@ function archive_liberime() {
     install -Dm644 ${INSTALL_PREFIX}/lib/librime* -t ${temp_dir}/lib/
     install -Dm644 ${INSTALL_PREFIX}/include/rime* -t ${temp_dir}/include/
 
-    install -Dm644 ${RIME_DATA_DIR}/*.* -t ${temp_dir}/share/rime-data/
-    install -Dm644 ${RIME_DATA_DIR}/opencc/* -t ${temp_dir}/share/rime-data/opencc/
-
     install -Dm644 ${INSTALL_PREFIX}/share/opencc/* -t ${temp_dir}/share/rime-data/opencc/
+
+    install -Dm644 ${RIME_DATA_DIR}/*.* -t ${temp_dir}/share/rime-data/
+
+    ## 有些 rime schema 会自带 opencc 文件，保存在 rime-data/opencc 目录下面。
+    ## 比如： rime-emoji
+    install -Dm644 ${RIME_DATA_DIR}/opencc/* -t ${temp_dir}/share/rime-data/opencc/
 
     ## 压缩
     if [[ -f "${zip_file}" ]]; then
