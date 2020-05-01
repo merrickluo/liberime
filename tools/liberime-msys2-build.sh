@@ -18,7 +18,7 @@ INSTALL_PREFIX="${MINGW_PREFIX}"
 RIME_DATA_DIR="${MINGW_PREFIX}/share/rime-data"
 
 # Archive
-ARCHIVE_DIR="~/.emacs.d/liberime-archive"
+ARCHIVE_DIR="/d/liberime-archive"
 
 # travis name
 TRAVIS_ARCHIVE_NAME=""
@@ -31,7 +31,7 @@ TRAVIS_ARCHIVE_NAME=""
 # dll_path_regex: 匹配正则的dll路径才会复制
 #######################################
 
-function copy_all_dll() {
+function install_all_dll() {
     local binary_file=$1
     local target_dir=$2
     local dll_path_regex=$3
@@ -48,8 +48,8 @@ function copy_all_dll() {
         fi
         
         if [[ ! -f "${target_dir}/${dll_file##*/}" ]]; then
-            cp ${dll_file} ${target_dir}
-            copy_all_dll ${dll_file} ${target_dir} ${dll_path_regex}
+            install -Dm644 ${dll_file} -t ${target_dir}
+            install_all_dll ${dll_file} ${target_dir} ${dll_path_regex}
         fi
     done
 
@@ -109,29 +109,30 @@ function archive_liberime() {
     fi
 
     local temp_dir="${ARCHIVE_DIR}/temp"
-    local temp_bin_dir="${ARCHIVE_DIR}/temp/bin"
-    local temp_site_lisp_dir="${ARCHIVE_DIR}/temp/share/emacs/site-lisp"
-    local temp_rime_data_dir="${ARCHIVE_DIR}/temp/share/rime-data"
+
     if [[ -d "${ARCHIVE_DIR}" ]]; then
         rm -rf "${ARCHIVE_DIR}"
     fi
 
-    ## 复制 el 文件
-    mkdir -p ${temp_site_lisp_dir}
-    cp liberime.el ${temp_site_lisp_dir}
-    
-    ## 复制 liberime-core.dll 和它的所有依赖
-    mkdir -p ${temp_bin_dir} 
-    cp build/liberime-core.dll ${temp_bin_dir}
-    cp "${INSTALL_PREFIX}/bin/librime.dll" ${temp_bin_dir}
-    copy_all_dll "${temp_bin_dir}/librime.dll" ${temp_bin_dir} "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
+    install -Dm644 tools/README-archive.txt ${temp_dir}/README.txt
 
-    ## 复制 rime-data
-    mkdir -p ${temp_rime_data_dir}
-    cp -r "${RIME_DATA_DIR}"/* ${temp_rime_data_dir}
-    
-    ## 复制 README.txt
-    cp README-archive.txt ${temp_dir}/README.txt
+    install -Dm644 liberime.el -t ${temp_dir}/share/emacs/site-lisp/
+
+    install -Dm644 build/liberime-core.dll             \
+            ${INSTALL_PREFIX}/bin/librime.dll          \
+            -t ${temp_dir}/bin/
+
+    install_all_dll ${MINGW_PREFIX}/bin/librime.dll    \
+                    ${temp_dir}/bin/                   \
+                    "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
+
+    install -Dm644 ${INSTALL_PREFIX}/lib/librime* -t ${temp_dir}/lib/
+    install -Dm644 ${INSTALL_PREFIX}/include/rime* -t ${temp_dir}/include/
+
+    install -Dm644 ${RIME_DATA_DIR}/*.* -t ${temp_dir}/share/rime-data/
+    install -Dm644 ${RIME_DATA_DIR}/opencc/* -t ${temp_dir}/share/rime-data/opencc/
+
+    install -Dm644 ${INSTALL_PREFIX}/share/opencc/* -t ${temp_dir}/share/rime-data/opencc/
 
     ## 压缩
     if [[ -f "${zip_file}" ]]; then
@@ -139,7 +140,7 @@ function archive_liberime() {
     fi
 
     cd ${temp_dir}
-    zip -r "${zip_file}" ./ > /dev/null
+    zip -r "${zip_file}" . > /dev/null
     cd ..
     rm -rf ${temp_dir}
     echo "Archive liberime to file: ${zip_file}"
@@ -153,7 +154,7 @@ function archive_liberime() {
 
 function display_usage() {
     cat <<HELP
-用法: ./msys2_build.sh [选项]
+用法: ./liberime-msys2-build.sh [选项]
 
       使用 msys2 构建 liberime-core.dll
 

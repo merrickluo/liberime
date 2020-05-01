@@ -26,8 +26,8 @@ before_install:
     esac
 
 script:
-- $mingw64 bash msys2-build.sh --travis=liberime-$TRAVIS_TAG-windows-x86_64
-- $mingw32 bash msys2-build.sh --travis=liberime-$TRAVIS_TAG-windows-i686
+- $mingw64 bash tools/liberime-msys2-build.sh --travis=liberime-$TRAVIS_TAG-windows-x86_64
+- $mingw32 bash tools/liberime-msys2-build.sh --travis=liberime-$TRAVIS_TAG-windows-i686
 
 
 deploy:
