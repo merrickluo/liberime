@@ -129,6 +129,7 @@ function archive_liberime() {
 
     install -Dm644 ${INSTALL_PREFIX}/lib/librime* -t ${temp_dir}/lib/
     install -Dm644 ${INSTALL_PREFIX}/include/rime* -t ${temp_dir}/include/
+    install -Dm644 ${INSTALL_PREFIX}/share/cmake/rime/* -t ${temp_dir}/share/cmake/rime/
 
     install -Dm644 ${INSTALL_PREFIX}/share/opencc/* -t ${temp_dir}/share/rime-data/opencc/
 
