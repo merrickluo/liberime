@@ -61,12 +61,6 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
    make
    #+END_SRC
 
-注意事项：
-
-1. 如果你用的是 Windows msys2 编译的 liberime，不要将 shared_data_dir
-   设置为小狼毫的 data 目录，因为小狼毫使用 MSVC 编译的，OpenCC 的
-   .ocd 文件格式不同。
-
 * 使用
 ** Emacs 配置
 #+BEGIN_SRC emacs-lisp
@@ -88,6 +82,9 @@ https://gist.github.com/merrickluo/553f39c131d0eb717cd59f72c9d4b60d
    rime 用户数据目录（user_data_dir）, 用户也可以使用下面两个变量强制设置：
    1. liberime-shared-data-dir
    2. liberime-user-data-dir
+3. Window 用户不要将 shared_data_dir 设置为小狼毫的 data 目录，因为小
+   狼毫自带的 OpenCC 文件无法用于 msys2 编译的 liberime, 会出现无法输
+   入简体中文的问题。
 
 *** 加载时自动编译
 #+BEGIN_SRC emacs-lisp
