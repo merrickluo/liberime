@@ -13,3 +13,8 @@ CMakeFiles/
 Debug
 
 /third_party_build/
+/src/*.o
+/src/*.so
+/src/*.dll
+/*.so
+/*.dll

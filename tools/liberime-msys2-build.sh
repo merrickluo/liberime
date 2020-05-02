@@ -62,16 +62,8 @@ function build_liberime() {
     echo ""
     echo "########## Install build dependences ##########"
     local dep_packages=(
-        base-devel
-        zip
-        git
+        base-devel zip
         ${PACKAGE_PREFIX}-gcc
-        ${PACKAGE_PREFIX}-jsoncpp
-        ${PACKAGE_PREFIX}-cmake
-        ${PACKAGE_PREFIX}-cmake
-        ${PACKAGE_PREFIX}-boost
-        ${PACKAGE_PREFIX}-glog
-        ${PACKAGE_PREFIX}-yaml-cpp
         ${PACKAGE_PREFIX}-librime
         ${PACKAGE_PREFIX}-librime-data
         ${PACKAGE_PREFIX}-rime-wubi
@@ -117,19 +109,16 @@ function archive_liberime() {
 
     install -Dm644 tools/README-archive.txt ${temp_dir}/README.txt
 
-    install -Dm644 liberime.el -t ${temp_dir}/share/emacs/site-lisp/
+    install -Dm644 liberime.el -t ${temp_dir}/share/emacs/site-lisp/liberime/
+    install -Dm644 src/liberime-core.dll -t ${temp_dir}/share/emacs/site-lisp/liberime/
 
-    install -Dm644 build/liberime-core.dll             \
-            ${INSTALL_PREFIX}/bin/librime.dll          \
-            -t ${temp_dir}/bin/
-
+    install -Dm644 ${MINGW_PREFIX}/bin/librime.dll -t ${temp_dir}/bin/
     install_all_dll ${MINGW_PREFIX}/bin/librime.dll    \
                     ${temp_dir}/bin/                   \
                     "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
 
     install -Dm644 ${INSTALL_PREFIX}/lib/librime* -t ${temp_dir}/lib/
     install -Dm644 ${INSTALL_PREFIX}/include/rime* -t ${temp_dir}/include/
-    install -Dm644 ${INSTALL_PREFIX}/share/cmake/rime/* -t ${temp_dir}/share/cmake/rime/
 
     install -Dm644 ${INSTALL_PREFIX}/share/opencc/* -t ${temp_dir}/share/rime-data/opencc/
 
