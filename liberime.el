@@ -176,17 +176,20 @@ if NAMES is nil, \"rime-data\" as fallback."
 ;;;###autoload
 (defun liberime-build ()
   (interactive)
-  (message "Liberime: start build liberime-core module ...")
-  (let ((default-directory (liberime-get-library-directory)))
-    (set-process-sentinel
-     (start-process "liberime-build" "*liberime build*" "make")
-     (lambda (proc _event)
-       (when (eq 'exit (process-status proc))
-         (if (= 0 (process-exit-status proc))
-             (progn (liberime-load)
-                    (message "Liberime: load liberime-core module successful."))
-           (pop-to-buffer "*liberime build*")
-           (error "liberime: building failed with exit code %d" (process-exit-status proc))))))))
+  (let ((dir (liberime-get-library-directory)))
+    (if (not (and dir (file-directory-p dir)))
+        (message "Liberime: library directory is not found.")
+      (message "Liberime: start build liberime-core module ...")
+      (let ((default-directory dir))
+        (set-process-sentinel
+         (start-process "liberime-build" "*liberime build*" "make")
+         (lambda (proc _event)
+           (when (eq 'exit (process-status proc))
+             (if (= 0 (process-exit-status proc))
+                 (progn (liberime-load)
+                        (message "Liberime: load liberime-core module successful."))
+               (pop-to-buffer "*liberime build*")
+               (error "Liberime: building failed with exit code %d" (process-exit-status proc))))))))))
 
 (defun liberime-workable-p ()
   "Return t when liberime can work."
