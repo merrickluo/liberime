@@ -13,14 +13,8 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
 
 ** Windows 系统下使用 msys2 安装依赖
    #+BEGIN_SRC shell
-   pacman -Sy --overwrite "*" --needed                \
-          base-devel zip git                          \
+   pacman -Sy --overwrite "*" --needed base-devel zip \
           ${MINGW_PACKAGE_PREFIX}-gcc                 \
-          ${MINGW_PACKAGE_PREFIX}-jsoncpp             \
-          ${MINGW_PACKAGE_PREFIX}-cmake               \
-          ${MINGW_PACKAGE_PREFIX}-boost               \
-          ${MINGW_PACKAGE_PREFIX}-glog                \
-          ${MINGW_PACKAGE_PREFIX}-yaml-cpp            \
           ${MINGW_PACKAGE_PREFIX}-librime             \
           ${MINGW_PACKAGE_PREFIX}-librime-data        \
           ${MINGW_PACKAGE_PREFIX}-rime-wubi           \
@@ -69,7 +63,7 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
 (require 'liberime nil t)
 (setq default-input-method "pyim")
 (with-eval-after-load "liberime"
-  (liberime-select-schema "luna_pinyin_simp")
+  (liberime-try-select-schema "luna_pinyin_simp")
   (setq pyim-default-scheme 'rime-quanpin))
 #+END_SRC
 
