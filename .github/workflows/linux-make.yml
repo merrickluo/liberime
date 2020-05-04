@@ -13,5 +13,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: install-depends
+      run: apt-get install gcc make librime librime-dev 
     - name: make
       run: make
