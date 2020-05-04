@@ -17,11 +17,8 @@ INSTALL_PREFIX="${MINGW_PREFIX}"
 # rime-data
 RIME_DATA_DIR="${MINGW_PREFIX}/share/rime-data"
 
-# Archive
-ARCHIVE_DIR="/d/liberime-archive"
-
-# travis name
-TRAVIS_ARCHIVE_NAME=""
+# archive name
+ARCHIVE_NAME=""
 
 #######################################
 # 复制所有dll依赖到指定目录
@@ -94,18 +91,13 @@ function archive_liberime() {
     echo "########## Archive liberime ##########"
 
     local zip_file
-    if [[ -n "${TRAVIS_ARCHIVE_NAME}" ]]; then
-        ARCHIVE_DIR="${PWD}/${TRAVIS_ARCHIVE_NAME}"
-        zip_file="${ARCHIVE_DIR}/${TRAVIS_ARCHIVE_NAME}.zip"
+    if [[ -n "${ARCHIVE_NAME}" ]]; then
+        zip_file="${PWD}/${ARCHIVE_NAME}.zip"
     else
-        zip_file="${ARCHIVE_DIR}/liberime-archive.zip"
+        zip_file="${PWD}/liberime-windows-${ARCH}.zip"
     fi
 
-    local temp_dir="${ARCHIVE_DIR}/temp"
-
-    if [[ -d "${ARCHIVE_DIR}" ]]; then
-        rm -rf "${ARCHIVE_DIR}"
-    fi
+    local temp_dir="temp"
 
     install -Dm644 tools/README-archive.txt ${temp_dir}/README.txt
 
@@ -128,22 +120,13 @@ function archive_liberime() {
     ## 比如： rime-emoji
     install -Dm644 ${RIME_DATA_DIR}/opencc/* -t ${temp_dir}/share/rime-data/opencc/
 
-    ## 压缩
-    if [[ -f "${zip_file}" ]]; then
-        rm -rf "${zip_file}"
-    fi
-
     cd ${temp_dir}
     zip -r "${zip_file}" . > /dev/null
+    
     cd ..
     rm -rf ${temp_dir}
+    
     echo "Archive liberime to file: ${zip_file}"
-
-    if [[ -n "${TRAVIS_ARCHIVE_NAME}" ]]; then
-        mv *.zip ..
-        rm -rf ${ARCHIVE_DIR}
-    fi
-
 }
 
 function display_usage() {
@@ -154,7 +137,7 @@ function display_usage() {
 
 选项:
 
-    -t, --travis=FILENAME       travis 打包名
+    -a, --archive=FILENAME      打包名称
 
     -h, --help                  查看帮助
 
@@ -169,8 +152,8 @@ function main() {
                 display_usage;
                 exit 0
                 ;;
-            -t|--travis)
-                TRAVIS_ARCHIVE_NAME="$2";
+            -a|--archive)
+                ARCHIVE_NAME="$2";
                 shift 2
                 ;;
             --)
@@ -189,7 +172,7 @@ function main() {
 }
 
 # 选项
-ARGS=$(getopt -o ha:t: --long help,archive:,travis: -n "$0" -- "$@")
+ARGS=$(getopt -o ha:a: --long help,archive:,archive: -n "$0" -- "$@")
 
 
 if [[ $? != 0 ]]; then
