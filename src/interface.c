@@ -155,4 +155,6 @@ emacs_value em_string(emacs_env *env, char *str) {
   }
 }
 
-emacs_value em_symbol(emacs_env *env, const char *str) { INTERN(str); }
+emacs_value em_symbol(emacs_env *env, const char *str) {
+  return INTERN(str);
+}
