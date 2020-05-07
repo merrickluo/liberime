@@ -1,20 +1,34 @@
 ;;; liberime.el --- Rime elisp binding    -*- lexical-binding: t; -*-
 
 ;; Author: A.I.
-;; Keywords: input method, rime
-;; Package-Requires: ((emacs "24.1"))
+;; URL: https://github.com/merrickluo/liberime
+;; Version: 0.0.6
+;; Package-Requires: ((emacs "25.1"))
+;; Keywords: convenience, Chinese, input-method, rime
 
-;; This file is NOT part of GNU Emacs.
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 2, or (at your option)
+;; any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program; if not, write to the Free Software
+;; Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 ;;; Commentary:
 
-;; load liberime by default
+;; A emacs dynamic module provide librime bindings for emacs.
 
 ;;; Code:
 (require 'cl-lib)
 
 (defcustom liberime-after-start-hook nil
-  "List of functions to be called after liberime start"
+  "List of functions to be called after liberime start."
   :group 'liberime
   :type 'hook)
 
@@ -73,7 +87,8 @@ More info: https://github.com/rime/home/wiki/SharedData"
       (file-name-directory file))))
 
 (defun liberime-find-rime-data (parent-dirs &optional names)
-  "Find directories listed in NAMES from PARENT-DIRS,
+  "Find directories listed in NAMES from PARENT-DIRS.
+
 if NAMES is nil, \"rime-data\" as fallback."
   (cl-some (lambda (parent)
              (cl-some (lambda (name)
@@ -86,7 +101,7 @@ if NAMES is nil, \"rime-data\" as fallback."
                          parent-dirs))))
 
 (defun liberime-get-shared-data-dir ()
-  "Return user data directory"
+  "Return user data directory."
   (or liberime-shared-data-dir
       ;; Guess
       (cl-case system-type
@@ -157,6 +172,7 @@ if NAMES is nil, \"rime-data\" as fallback."
 
 ;;;###autoload
 (defun liberime-build ()
+  "Build liberime-core module."
   (interactive)
   (let ((dir (liberime-get-library-directory)))
     (if (not (and dir (file-directory-p dir)))
@@ -178,6 +194,7 @@ if NAMES is nil, \"rime-data\" as fallback."
   (featurep 'liberime-core))
 
 (defun liberime--start ()
+  "Start liberime."
   (let ((shared-dir (liberime-get-shared-data-dir))
         (user-dir (liberime-get-user-data-dir)))
     (message "Liberime: start with shared dir %S, user dir: %S" shared-dir user-dir)
@@ -188,6 +205,7 @@ if NAMES is nil, \"rime-data\" as fallback."
 
 ;;;###autoload
 (defun liberime-load ()
+  "Load liberime-core module."
   (interactive)
   (when (and liberime-module-file
              (file-exists-p liberime-module-file)
@@ -249,18 +267,16 @@ this function will go to proper page then select a candidate."
 
 ;;;###autoload
 (defun liberime-deploy()
-  "deploy liberime to affect config file change"
+  "Deploy liberime to affect config file change."
   (interactive)
   (liberime-finalize)
   (liberime--start))
 
 ;;;###autoload
 (defun liberime-set-page-size (page-size)
-  "set rime page-size to `prefix' or by default 100
-example C-u 200 M-x liberime-set-page-size
-you also need to call liberime-deploy to make it take affect
-you only need to do this once.
-"
+  "Set rime page-size to PAGE-SIZE or by default 10.
+you also need to call `liberime-deploy' to make it take affect
+you only need to do this once."
   (interactive "P")
   (liberime-set-user-config "default.custom" "patch/menu/page_size" (or page-size 10) "int"))
 
@@ -306,11 +322,11 @@ you only need to do this once.
 
 ;;;###autoload
 (defun liberime-sync ()
-  "sync rime user data
-you should specify sync_dir in ~/.emacs.d/rime/installation.yaml
-"
+  "Sync rime user data.
+you should specify sync_dir in ~/.emacs.d/rime/installation.yaml"
   (interactive)
   (liberime-sync-user-data))
 
 (provide 'liberime)
+
 ;;; liberime.el ends here
