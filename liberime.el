@@ -178,9 +178,44 @@ if NAMES is nil, \"rime-data\" as fallback."
     (if (not (and dir (file-directory-p dir)))
         (message "Liberime: library directory is not found.")
       (message "Liberime: start build liberime-core module ...")
-      (let ((default-directory dir))
+      (let ((default-directory dir)
+            (makefile
+             (concat
+              (if (eq system-type 'windows-nt)
+                  "LIBRIME = -llibrime\n"
+                "LIBRIME = -lrime\n")
+              (concat
+               "CC = gcc\n"
+               "LDFLAGS = -shared\n"
+               "SRC = src\n"
+               "SOURCES = $(wildcard $(SRC)/*.c)\n"
+               "OBJS = $(patsubst %.c, %.o, $(SOURCES))\n")
+              (format "TARGET = $(SRC)/liberime-core%s\n" (or module-file-suffix ".so"))
+              (let* ((path (replace-regexp-in-string
+                            "/share/emacs/.*" ""
+                            (or (locate-library "files") "/usr")))
+                     (include-dir (concat (file-name-as-directory path) "include/")))
+                (if (file-exists-p (concat include-dir "emacs-module.h"))
+                    (concat "CFLAGS = -fPIC -O2 -Wall -I " include-dir "\n")
+                  "CFLAGS = -fPIC -O2 -Wall -I emacs-module\n"))
+              (let ((p (getenv "RIME_PATH")))
+                (if p
+                    (concat "CFLAGS += -I " p "/src/\n"
+                            "LDFLAGS += -L " p "/build/lib/ -L " p "/build/lib/Release/\n"
+                            "LDFLAGS += -Wl,-rpath," p "/build/lib/:" p "/build/lib/Release\n")
+                  "\n"))
+              (concat
+               ".PHONY:all objs\n"
+               "all:$(TARGET)\n"
+               "objs:$(OBJS)\n"
+               "$(TARGET):$(OBJS)\n"
+               "	$(CC) $(OBJS) $(LDFLAGS) $(LIBRIME) $(LIBS) -o $@"))))
+        (with-temp-buffer
+          (insert makefile)
+          (write-region (point-min) (point-max) (concat dir "Makefile-liberime-build") nil :silent))
         (set-process-sentinel
-         (start-process "liberime-build" "*liberime build*" "make")
+         (start-process "liberime-build" "*liberime build*"
+                        "make" "liberime-build")
          (lambda (proc _event)
            (when (eq 'exit (process-status proc))
              (if (= 0 (process-exit-status proc))

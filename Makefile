@@ -1,4 +1,5 @@
 UNAME_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
+EMACS   := $(shell sh -c 'which emacs')
 
 SUFFIX = .so
 LIBRIME = -lrime
@@ -13,16 +14,18 @@ ifdef MODULE_FILE_SUFFIX
 	SUFFIX = $(MODULE_FILE_SUFFIX)
 endif
 
-EMACS = emacs
 VERSION = 1.00
 CC = gcc
-CFLAGS = -fPIC -O2 -Wall
 LDFLAGS = -shared
-INCLUDES  = -Isrc
 SRC = src
 SOURCES = $(wildcard $(SRC)/*.c)
 OBJS = $(patsubst %.c, %.o, $(SOURCES))
 TARGET = $(SRC)/liberime-core$(SUFFIX)
+CFLAGS = -fPIC -O2 -Wall
+
+ifndef EMACS
+	CFLAGS += -I emacs-module
+endif
 
 ifdef RIME_PATH
 	CFLAGS += -I ${RIME_PATH}/src/
@@ -44,7 +47,10 @@ clean:
 
 $(TARGET):$(OBJS)
 	rm -rf build
-	$(CC) $(OBJS) $(INCLUDES) $(LDFLAGS) $(LIBS) -o $@
+	$(CC) $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 test:$(TARGET)
 	${EMACS} -Q -L $(SRC) -L . liberime-test.el
+
+liberime-build:
+	make -f Makefile-liberime-build
