@@ -19,3 +19,4 @@ Debug
 /*.so
 /*.dll
 /*.zip
+/Makefile-liberime-build
