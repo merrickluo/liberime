@@ -22,7 +22,7 @@
 
 ;;; Commentary:
 
-;; A emacs dynamic module provide librime bindings for emacs.
+;; A Emacs dynamic module provide librime bindings for Emacs.
 
 ;;; Code:
 (require 'cl-lib)
@@ -78,6 +78,26 @@ More info: https://github.com/rime/home/wiki/SharedData"
 
 (defvar liberime-current-schema nil
   "The rime schema set by `liberime-select-schema'.")
+
+(declare-function liberime-clear-composition "ext:src/liberime-core.c")
+(declare-function liberime-commit-composition "ext:src/liberime-core.c")
+(declare-function liberime-finalize "ext:src/liberime-core.c")
+(declare-function liberime-get-commit "ext:src/liberime-core.c")
+(declare-function liberime-get-context "ext:src/liberime-core.c")
+(declare-function liberime-get-input "ext:src/liberime-core.c")
+(declare-function liberime-get-schema-config "ext:src/liberime-core.c")
+(declare-function liberime-get-schema-list "ext:src/liberime-core.c")
+(declare-function liberime-get-status "ext:src/liberime-core.c")
+(declare-function liberime-get-sync-dir "ext:src/liberime-core.c")
+(declare-function liberime-get-user-config "ext:src/liberime-core.c")
+(declare-function liberime-process-key "ext:src/liberime-core.c")
+(declare-function liberime-search "ext:src/liberime-core.c")
+(declare-function liberime-select-candidate "ext:src/liberime-core.c")
+(declare-function liberime-select-schema "ext:src/liberime-core.c")
+(declare-function liberime-set-schema-config "ext:src/liberime-core.c")
+(declare-function liberime-set-user-config "ext:src/liberime-core.c")
+(declare-function liberime-start "ext:src/liberime-core.c")
+(declare-function liberime-sync-user-data "ext:src/liberime-core.c")
 
 (defun liberime-get-library-directory ()
   "Return the liberime package direcory."
@@ -358,7 +378,8 @@ you only need to do this once."
 ;;;###autoload
 (defun liberime-sync ()
   "Sync rime user data.
-you should specify sync_dir in ~/.emacs.d/rime/installation.yaml"
+User should specify sync_dir in installation.yaml file of
+`liberime-user-data-dir' directory."
   (interactive)
   (liberime-sync-user-data))
 
