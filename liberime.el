@@ -58,21 +58,6 @@ More info: https://github.com/rime/home/wiki/SharedData"
   :group 'liberime
   :type 'boolean)
 
-(defvar liberime-message
-  "Liberime can not load properly, please check:
-1. Does your emacs support dynamic module?
-   a. Emacs should build with modules support.
-   b. When Emacs support dynamic module, variable
-      `module-file-suffix' should non-nil.
-2. Does liberime-core module compile and load properly?
-   a. User should install librime, gcc and make,
-      then build liberime-core module according to README.org,
-      Shortcut: (liberime-open-package-readme)
-   b. User can try (liberime-build) shortcut function.
-   c. Function (liberime-workable-p) should return t.
-3. When liberime works, call (liberime-load) to load it."
-  "The message which will be showed when `liberime-load' failure.")
-
 (defvar liberime-select-schema-timer nil
   "Timer used by `liberime-select-schema'.")
 
@@ -194,10 +179,20 @@ if NAMES is nil, \"rime-data\" as fallback."
 (defun liberime-build ()
   "Build liberime-core module."
   (interactive)
-  (let ((dir (liberime-get-library-directory)))
+  (let ((buffer (get-buffer-create "*liberime build help*"))
+        (dir (liberime-get-library-directory)))
     (if (not (and dir (file-directory-p dir)))
         (message "Liberime: library directory is not found.")
       (message "Liberime: start build liberime-core module ...")
+      (with-current-buffer buffer
+        (erase-buffer)
+        (insert "* Liberime build help")
+        (unless module-file-suffix
+          (insert "** Your emacs do not support dynamic module.\n"))
+        (unless (executable-find "gcc")
+          (insert "** You should install gcc."))
+        (unless (executable-find "make")
+          (insert "** You should install make.")))
       (let ((default-directory dir)
             (makefile
              (concat
@@ -241,7 +236,7 @@ if NAMES is nil, \"rime-data\" as fallback."
              (if (= 0 (process-exit-status proc))
                  (progn (liberime-load)
                         (message "Liberime: load liberime-core module successful."))
-               (pop-to-buffer "*liberime build*")
+               (pop-to-buffer buffer)
                (error "Liberime: building failed with exit code %d" (process-exit-status proc))))))))))
 
 (defun liberime-workable-p ()
@@ -276,13 +271,12 @@ if NAMES is nil, \"rime-data\" as fallback."
       (liberime--start)
     (if liberime-auto-build
         (liberime-build)
-      (when (> (length liberime-message) 0)
-        (let ((buf (get-buffer-create "*liberime message*")))
-          (with-current-buffer buf
-            (erase-buffer)
-            (insert liberime-message)
-            (goto-char (point-min)))
-          (pop-to-buffer buf))))))
+      (let ((buf (get-buffer-create "*liberime load*")))
+        (with-current-buffer buf
+          (erase-buffer)
+          (insert "Liberime: Fail to load liberime-core module, try to run command `liberime-build'.")
+          (goto-char (point-min)))
+        (pop-to-buffer buf)))))
 
 (liberime-load)
 
