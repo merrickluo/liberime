@@ -274,7 +274,7 @@ if NAMES is nil, \"rime-data\" as fallback."
       (let ((buf (get-buffer-create "*liberime load*")))
         (with-current-buffer buf
           (erase-buffer)
-          (insert "Liberime: Fail to load liberime-core module, try to run command `liberime-build'.")
+          (insert "Liberime: Fail to load liberime-core module, try to run command: (liberime-build)")
           (goto-char (point-min)))
         (pop-to-buffer buf)))))
 
