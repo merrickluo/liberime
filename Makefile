@@ -27,10 +27,14 @@ ifndef EMACS
 	CFLAGS += -I emacs-module
 endif
 
+ifneq (,$(findstring Darwin,$(UNAME_S)))
+	CFLAGS += -I emacs-module
+endif
+
 ifdef RIME_PATH
 	CFLAGS += -I ${RIME_PATH}/src/
 	LDFLAGS += -L ${RIME_PATH}/build/lib/ -L ${RIME_PATH}/build/lib/Release/
-	LDFLAGS += -Wl,-rpath,${RIME_PATH}/build/lib/:${RIME_PATH}/build/lib/Release $(LIBRIME)
+	LDFLAGS += -Wl -rpath ${RIME_PATH}/build/lib/Release $(LIBRIME)
 else
 	LDFLAGS += $(LIBRIME)
 endif
