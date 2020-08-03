@@ -31,6 +31,7 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
 ** Linux 系统下编译 liberime:
 
    #+BEGIN_SRC shell
+   export EMACS_MAJOR_VERSION = 26  # 按实际情况更改
    make
    #+END_SRC
 
@@ -44,6 +45,7 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
 3. 编译 liberime:
 
    #+BEGIN_SRC shell
+   export EMACS_MAJOR_VERSION = 26  # 按实际情况更改
    make
    #+END_SRC
 
@@ -53,6 +55,7 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
 3. 运行下面的命令
 
    #+BEGIN_SRC shell
+   export EMACS_MAJOR_VERSION = 26  # 按实际情况更改
    make
    #+END_SRC
 

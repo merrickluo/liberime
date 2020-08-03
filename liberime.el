@@ -212,7 +212,7 @@ if NAMES is nil, \"rime-data\" as fallback."
                      (include-dir (concat (file-name-as-directory path) "include/")))
                 (if (file-exists-p (concat include-dir "emacs-module.h"))
                     (concat "CFLAGS = -fPIC -O2 -Wall -I " include-dir "\n")
-                  "CFLAGS = -fPIC -O2 -Wall -I emacs-module\n"))
+                  (concat "CFLAGS = -fPIC -O2 -Wall -I emacs-module/" (number-to-string emacs-major-version) "\n")))
               (let ((p (getenv "RIME_PATH")))
                 (if p
                     (concat "CFLAGS += -I " p "/src/\n"

@@ -23,8 +23,12 @@ OBJS = $(patsubst %.c, %.o, $(SOURCES))
 TARGET = $(SRC)/liberime-core$(SUFFIX)
 CFLAGS = -fPIC -O2 -Wall
 
+ifndef EMACS_MAJOR_VERSION
+	EMACS_MAJOR_VERSION = 26
+endif
+
 ifndef EMACS
-	CFLAGS += -I emacs-module
+	CFLAGS += -I emacs-module/$(EMACS_MAJOR_VERSION)
 endif
 
 ifdef RIME_PATH
