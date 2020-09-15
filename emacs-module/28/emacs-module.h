@@ -34,7 +34,7 @@ information how to write modules and use this header file.
 #include <stdbool.h>
 #endif
 
-#define EMACS_MAJOR_VERSION 27
+#define EMACS_MAJOR_VERSION 28
 
 #if defined __cplusplus && __cplusplus >= 201103L
 # define EMACS_NOEXCEPT noexcept
@@ -66,7 +66,7 @@ extern "C" {
 #endif
 
 /* Current environment.  */
-typedef struct emacs_env_27 emacs_env;
+typedef struct emacs_env_28 emacs_env;
 
 /* Opaque pointer representing an Emacs Lisp value.
    BEWARE: Do not assume NULL is a valid value!  */
@@ -724,7 +724,20 @@ struct emacs_env_28
                                    const emacs_limb_t *magnitude)
     EMACS_ATTRIBUTE_NONNULL (1);
 
-@module_env_snippet_28@
+  /* Add module environment functions newly added in Emacs 28 here.
+     Before Emacs 28 is released, remove this comment and start
+     module-env-29.h on the master branch.  */
+
+  void (*(*EMACS_ATTRIBUTE_NONNULL (1)
+            get_function_finalizer) (emacs_env *env,
+                                     emacs_value arg)) (void *) EMACS_NOEXCEPT;
+
+  void (*set_function_finalizer) (emacs_env *env, emacs_value arg,
+                                  void (*fin) (void *) EMACS_NOEXCEPT)
+    EMACS_ATTRIBUTE_NONNULL (1);
+
+  int (*open_channel) (emacs_env *env, emacs_value pipe_process)
+    EMACS_ATTRIBUTE_NONNULL (1);
 };
 
 /* Every module should define a function as follows.  */
