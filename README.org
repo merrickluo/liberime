@@ -22,10 +22,11 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
           ${MINGW_PACKAGE_PREFIX}-rime-double-pinyin
    #+END_SRC
 
-   将 opencc 包自带的文件拷贝到 rime-data/opencc 目录下，解决无法输入
+   将 opencc 包自带的文件链接到 rime-data/opencc 目录下，解决无法输入
    简体中文的问题。
+
    #+BEGIN_SRC shell
-   cp ${MINGW_PREFIX}/share/opencc/* ${MINGW_PREFIX}/share/rime-data/opencc/
+   ln -s ${MINGW_PREFIX}/share/opencc/* ${MINGW_PREFIX}/share/rime-data/opencc
    #+END_SRC
 * 编译
 ** Linux 系统下编译 liberime:
