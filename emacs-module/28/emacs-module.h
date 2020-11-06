@@ -219,13 +219,13 @@ struct emacs_env_25
     EMACS_ATTRIBUTE_NONNULL(1);
 
   /* Copy the content of the Lisp string VALUE to BUFFER as an utf8
-     NUL-terminated string.
+     null-terminated string.
 
      SIZE must point to the total size of the buffer.  If BUFFER is
      NULL or if SIZE is not big enough, write the required buffer size
      to SIZE and return true.
 
-     Note that SIZE must include the last NUL byte (e.g. "abc" needs
+     Note that SIZE must include the last null byte (e.g. "abc" needs
      a buffer of size 4).
 
      Return true if the string was successfully copied.  */
@@ -354,13 +354,13 @@ struct emacs_env_26
     EMACS_ATTRIBUTE_NONNULL(1);
 
   /* Copy the content of the Lisp string VALUE to BUFFER as an utf8
-     NUL-terminated string.
+     null-terminated string.
 
      SIZE must point to the total size of the buffer.  If BUFFER is
      NULL or if SIZE is not big enough, write the required buffer size
      to SIZE and return true.
 
-     Note that SIZE must include the last NUL byte (e.g. "abc" needs
+     Note that SIZE must include the last null byte (e.g. "abc" needs
      a buffer of size 4).
 
      Return true if the string was successfully copied.  */
@@ -493,13 +493,13 @@ struct emacs_env_27
     EMACS_ATTRIBUTE_NONNULL(1);
 
   /* Copy the content of the Lisp string VALUE to BUFFER as an utf8
-     NUL-terminated string.
+     null-terminated string.
 
      SIZE must point to the total size of the buffer.  If BUFFER is
      NULL or if SIZE is not big enough, write the required buffer size
      to SIZE and return true.
 
-     Note that SIZE must include the last NUL byte (e.g. "abc" needs
+     Note that SIZE must include the last null byte (e.g. "abc" needs
      a buffer of size 4).
 
      Return true if the string was successfully copied.  */
@@ -651,13 +651,13 @@ struct emacs_env_28
     EMACS_ATTRIBUTE_NONNULL(1);
 
   /* Copy the content of the Lisp string VALUE to BUFFER as an utf8
-     NUL-terminated string.
+     null-terminated string.
 
      SIZE must point to the total size of the buffer.  If BUFFER is
      NULL or if SIZE is not big enough, write the required buffer size
      to SIZE and return true.
 
-     Note that SIZE must include the last NUL byte (e.g. "abc" needs
+     Note that SIZE must include the last null byte (e.g. "abc" needs
      a buffer of size 4).
 
      Return true if the string was successfully copied.  */
@@ -738,6 +738,15 @@ struct emacs_env_28
 
   int (*open_channel) (emacs_env *env, emacs_value pipe_process)
     EMACS_ATTRIBUTE_NONNULL (1);
+
+  void (*make_interactive) (emacs_env *env, emacs_value function,
+                            emacs_value spec)
+    EMACS_ATTRIBUTE_NONNULL (1);
+
+  /* Create a unibyte Lisp string from a string.  */
+  emacs_value (*make_unibyte_string) (emacs_env *env,
+				      const char *str, ptrdiff_t len)
+    EMACS_ATTRIBUTE_NONNULL(1, 2);
 };
 
 /* Every module should define a function as follows.  */
