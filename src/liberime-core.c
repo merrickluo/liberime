@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <rime_api.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -6,6 +7,7 @@
 
 #include <unistd.h>
 
+#include "emacs-module.h"
 #include "interface.h"
 #include "liberime-core.h"
 
@@ -26,7 +28,7 @@
 #define CONS_INT(key, integer)                                                 \
   em_cons(env, env->intern(env, key), env->make_integer(env, integer));
 #define CONS_STRING(key, str)                                                  \
-  em_cons(env, env->intern(env, key), env->make_string(env, str, strlen(str)))
+  em_cons(env, env->intern(env, key), em_string(env, str))
 #define CONS_NIL(key) em_cons(env, env->intern(env, key), em_nil)
 #define CONS_VALUE(key, value) em_cons(env, env->intern(env, key), value)
 
@@ -34,6 +36,8 @@
 #define SCHEMA_MAXSTRLEN 1024
 #define CONFIG_MAXSTRLEN 1024
 #define INPUT_MAXSTRLEN 1024
+// do not set limits now
+#define SEARCH_CANDIDATE_MAXLEN INT_MAX
 
 #define NO_SESSION_ERR                                                         \
   "Cannot connect to librime session, make sure to run liberime-start first."
@@ -80,44 +84,6 @@ static bool _ensure_session(EmacsRime *rime) {
     }
   }
   return true;
-}
-
-static char *_copy_string(char *str) {
-  if (str) {
-    size_t size = strnlen(str, CANDIDATE_MAXSTRLEN);
-    char *new_str = malloc(size + 1);
-    strncpy(new_str, str, size);
-    new_str[size] = '\0';
-    return new_str;
-  } else {
-    return NULL;
-  }
-}
-
-EmacsRimeCandidates _get_candidates(EmacsRime *rime, size_t limit) {
-  EmacsRimeCandidates c = {
-      .size = 0,
-      .list = (CandidateLinkedList *)malloc(sizeof(CandidateLinkedList))};
-
-  RimeCandidateListIterator iterator = {0};
-  CandidateLinkedList *next = c.list;
-  if (rime->api->candidate_list_begin(rime->session_id, &iterator)) {
-    while (rime->api->candidate_list_next(&iterator) &&
-           (limit == 0 || c.size < limit)) {
-      c.size += 1;
-
-      next->text = _copy_string(iterator.candidate.text);
-      next->comment = _copy_string(iterator.candidate.comment);
-
-      next->next = (CandidateLinkedList *)malloc(sizeof(CandidateLinkedList));
-
-      next = next->next;
-    }
-    next->next = NULL;
-    rime->api->candidate_list_end(&iterator);
-  }
-
-  return c;
 }
 
 // bindings
@@ -179,25 +145,30 @@ void free_candidate_list(CandidateLinkedList *list) {
   }
 }
 
-DOCSTRING(search, "STRING &optional LIMIT",
-          "Input STRING and return LIMIT number candidates.\n"
+DOCSTRING(search, "STRING &optional LIMIT SKIP",
+          "Input STRING and return skip SKIP and LIMIT number candidates.\n"
           "When LIMIT is nil, return all candidates.");
 static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
                           void *data) {
   EmacsRime *rime = (EmacsRime *)data;
   char *string = em_get_string(env, args[0]);
 
-  size_t limit = 0;
-  if (nargs == 2) {
-    if (!env->is_not_nil(env, args[1])) {
-      limit = 0;
-    } else {
+  // setup LIMIT
+  size_t limit = SEARCH_CANDIDATE_MAXLEN;
+  if (nargs > 1) {
+    if (env->is_not_nil(env, args[1])) {
       limit = env->extract_integer(env, args[1]);
       // if limit set to 0 return nil immediately
       if (limit == 0) {
         return em_nil;
       }
     }
+  }
+
+  // setup SKIP
+  size_t skip = 0;
+  if (nargs > 2) {
+    skip = env->extract_integer(env, args[2]);
   }
 
   if (!_ensure_session(rime)) {
@@ -208,38 +179,29 @@ static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
   rime->api->clear_composition(rime->session_id);
   rime->api->simulate_key_sequence(rime->session_id, string);
 
-  EmacsRimeCandidates candidates = _get_candidates(rime, limit);
+  emacs_value *candidates = malloc(sizeof(emacs_value) * limit);
+  RimeCandidateListIterator iterator = {0};
 
-  // printf("%s: find candidates size: %ld\n", string, candidates.size);
-  // return nil if no candidates found
-  if (candidates.size == 0) {
-    return em_nil;
-  }
+  size_t size = 0;
+  size_t i = 0;
+  if (rime->api->candidate_list_begin(rime->session_id, &iterator)) {
+    while (rime->api->candidate_list_next(&iterator) && size < limit) {
+      if (i++ < skip) {
+        continue;
+      }
 
-  emacs_value *array = malloc(sizeof(emacs_value) * candidates.size);
-
-  CandidateLinkedList *next = candidates.list;
-  int i = 0;
-  while (next && i < candidates.size) {
-    emacs_value value = env->make_string(env, next->text, strlen(next->text));
-    if (next->comment) {
-      emacs_value comment =
-          env->make_string(env, next->comment, strlen(next->comment));
-      value = em_propertize(env, value, ":comment", comment);
+      emacs_value value = em_string(env, iterator.candidate.text);
+      if (iterator.candidate.comment) {
+        emacs_value comment = em_string(env, iterator.candidate.comment);
+        value = em_propertize(env, value, ":comment", comment);
+      }
+      candidates[size++] = value;
     }
-    array[i++] = value;
-    next = next->next;
+    rime->api->candidate_list_end(&iterator);
   }
-  // printf("conveted array size: %d\n", i);
 
-  emacs_value result = em_list(env, candidates.size, array);
-
-  // free(candidates.candidates);
-  free_candidate_list(candidates.list);
-  free(array);
   free(string);
-
-  return result;
+  return em_list(env, size, candidates);
 }
 
 DOCSTRING(get_sync_dir, "", "Get rime sync directory.");
@@ -426,11 +388,10 @@ static emacs_value get_commit(emacs_env *env, ptrdiff_t nargs,
       return em_nil;
     }
 
-    char *commit_str = _copy_string(commit.text);
+    emacs_value result = em_string(env, commit.text);
     rime->api->free_commit(&commit);
-    // printf("commit str is %s\n", commit_str);
 
-    return env->make_string(env, commit_str, strlen(commit_str));
+    return result;
   }
 
   return em_nil;
@@ -455,12 +416,19 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs,
   size_t result_size = 3;
   emacs_value result_array[result_size];
 
+  // When we don't have a preedit,
+  // The composition should be nil.
+  if (!context.composition.preedit) {
+    return em_nil;
+  }
+
   // 0. context.commit_text_preview
-  char *ctp_str = _copy_string(context.commit_text_preview);
-  if (ctp_str)
-    result_array[0] = CONS_STRING("commit-text-preview", ctp_str);
-  else
+  if (context.commit_text_preview) {
+    result_array[0] =
+        CONS_STRING("commit-text-preview", context.commit_text_preview);
+  } else {
     result_array[0] = CONS_NIL("commit-text-preview");
+  }
 
   // 2. context.composition
   size_t composition_size = 5;
@@ -469,15 +437,7 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs,
   composition_array[1] = CONS_INT("cursor-pos", context.composition.cursor_pos);
   composition_array[2] = CONS_INT("sel-start", context.composition.sel_start);
   composition_array[3] = CONS_INT("sel-end", context.composition.sel_end);
-
-  char *preedit_str = _copy_string(context.composition.preedit);
-  if (preedit_str)
-    composition_array[4] = CONS_STRING("preedit", preedit_str);
-  else
-    // When we don't have a preedit,
-    // The composition should be nil.
-    return em_nil;
-  /* composition_array[4] = CONS_NIL("preedit"); */
+  composition_array[4] = CONS_STRING("preedit", context.composition.preedit);
 
   emacs_value composition_value =
       em_list(env, composition_size, composition_array);
@@ -543,17 +503,17 @@ static emacs_value get_status(emacs_env *env, ptrdiff_t nargs,
   size_t result_size = 9;
   emacs_value result_array[result_size];
 
-  char *schema_id = _copy_string(status.schema_id);
-  if (schema_id)
-    result_array[0] = CONS_STRING("schema_id", schema_id);
-  else
+  if (status.schema_id) {
+    result_array[0] = CONS_STRING("schema_id", status.schema_id);
+  } else {
     result_array[0] = CONS_NIL("schema_id");
+  }
 
-  char *schema_name = _copy_string(status.schema_name);
-  if (schema_name)
-    result_array[1] = CONS_STRING("schema_name", schema_name);
-  else
+  if (status.schema_name) {
+    result_array[1] = CONS_STRING("schema_name", status.schema_name);
+  } else {
     result_array[1] = CONS_NIL("schema_name");
+  }
 
   result_array[2] =
       CONS_VALUE("is_disabled", status.is_disabled ? em_t : em_nil);
@@ -861,7 +821,7 @@ void liberime_init(emacs_env *env) {
   }
 
   DEFUN("liberime-start", start, 2, 2);
-  DEFUN("liberime-search", search, 1, 2);
+  DEFUN("liberime-search", search, 1, 3);
   DEFUN("liberime-select-schema", select_schema, 1, 1);
   DEFUN("liberime-get-schema-list", get_schema_list, 0, 0);
 
