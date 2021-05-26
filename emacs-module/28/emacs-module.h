@@ -1,6 +1,6 @@
 /* emacs-module.h - GNU Emacs module API.
 
-Copyright (C) 2015-2020 Free Software Foundation, Inc.
+Copyright (C) 2015-2021 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -51,7 +51,9 @@ information how to write modules and use this header file.
 #if 3 < __GNUC__ + (3 <= __GNUC_MINOR__)
 # define EMACS_ATTRIBUTE_NONNULL(...) \
    __attribute__ ((__nonnull__ (__VA_ARGS__)))
-#elif defined __has_attribute
+#elif (defined __has_attribute \
+       && (!defined __clang_minor__ \
+	   || 3 < __clang_major__ + (5 <= __clang_minor__)))
 # if __has_attribute (__nonnull__)
 #  define EMACS_ATTRIBUTE_NONNULL(...) \
     __attribute__ ((__nonnull__ (__VA_ARGS__)))
