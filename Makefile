@@ -16,12 +16,12 @@ endif
 
 VERSION = 1.00
 CC = gcc
-LDFLAGS = -shared
+LDFLAGS += -shared
 SRC = src
 SOURCES = $(wildcard $(SRC)/*.c)
 OBJS = $(patsubst %.c, %.o, $(SOURCES))
 TARGET = $(SRC)/liberime-core$(SUFFIX)
-CFLAGS = -fPIC -O2 -Wall
+CFLAGS += -fPIC -O2 -Wall
 
 ifndef EMACS_MAJOR_VERSION
 	EMACS_MAJOR_VERSION = 26
