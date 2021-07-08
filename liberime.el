@@ -247,7 +247,7 @@ if NAMES is nil, \"rime-data\" as fallback."
   "Start liberime."
   (let ((shared-dir (liberime-get-shared-data-dir))
         (user-dir (liberime-get-user-data-dir)))
-    (message "Liberime: start with shared dir %S, user dir: %S" shared-dir user-dir)
+    ;; (message "Liberime: start with shared dir %S, user dir: %S" shared-dir user-dir)
     (liberime-start shared-dir user-dir)
     (when liberime-current-schema
       (liberime-try-select-schema liberime-current-schema))
