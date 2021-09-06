@@ -70,29 +70,11 @@ static emacs_value em_funcall(emacs_env *env, emacs_value func, ptrdiff_t nargs,
   return env->funcall(env, func, nargs, args);
 }
 
-bool em_assert(emacs_env *env, emacs_value predicate, emacs_value arg) {
-  bool cond = env->is_not_nil(env, em_funcall(env, predicate, 1, arg));
-  if (!cond)
-    em_signal_wrong_type(env, predicate, arg);
-  return cond;
-}
-
 void em_signal_rimeerr(emacs_env *env, int _klass, const char *_msg) {
   emacs_value klass = env->make_integer(env, _klass);
   emacs_value msg = env->make_string(env, _msg, strlen(_msg));
   env->non_local_exit_signal(env, _rimeerr,
                              em_cons(env, klass, em_cons(env, msg, em_nil)));
-}
-
-void em_signal_wrong_type(emacs_env *env, emacs_value expected,
-                          emacs_value actual) {
-  env->non_local_exit_signal(
-      env, _wrong_type_argument,
-      em_cons(env, expected, em_cons(env, actual, em_nil)));
-}
-
-void em_signal_wrong_value(emacs_env *env, emacs_value actual) {
-  env->non_local_exit_signal(env, _wrong_value_argument, actual);
 }
 
 char *em_get_string(emacs_env *env, emacs_value arg) {
@@ -128,10 +110,6 @@ emacs_value em_expand_file_name(emacs_env *env, emacs_value path) {
 
 void em_provide(emacs_env *env, const char *feature) {
   em_funcall(env, _provide, 1, INTERN(feature));
-}
-
-bool em_user_ptrp(emacs_env *env, emacs_value val) {
-  return env->is_not_nil(env, em_funcall(env, _user_ptrp, 1, val));
 }
 
 emacs_value em_list(emacs_env *env, ptrdiff_t array_size, emacs_value *array) {

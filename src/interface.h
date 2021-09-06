@@ -11,43 +11,18 @@ extern emacs_value em_nil, em_stringp, em_t;
 extern emacs_value em_direct, em_symbolic;
 
 /**
- * Initialize the libegit2-emacs interface.
+ * Initialize the liberime emacs interface.
  * This function should only be called once.
  */
 void em_init(emacs_env *env);
 
 /**
- * Signal a wrong-type-argument error if PREDICATE does not apply to ARG.
- * @param env The active Emacs environment.
- * @param predicate The predicate.
- * @param arg The argument.
- * @return True iff an error was signaled.
- */
-bool em_assert(emacs_env *env, emacs_value predicate, emacs_value arg);
-
-/**
- * Signal an error originating form libgit2.
+ * Signal an error originating form liberime.
  * @param env The active Emacs environment.
  * @param _klass The error code.
  * @param _msg The error message.
  */
 void em_signal_rimeerr(emacs_env *env, int _klass, const char *_msg);
-
-/**
- * Signal a wrong-type-argument error.
- * @param env The active Emacs environment.
- * @param expected Symbol describing the expected type.
- * @param actual Emacs value that does not have the expected type.
- */
-void em_signal_wrong_type(emacs_env *env, emacs_value expected,
-                          emacs_value actual);
-
-/**
- * Signal a wrong-value-argument error.
- * @param env The active Emacs environment.
- * @param actual Emacs value that does not have the expected value.
- */
-void em_signal_wrong_value(emacs_env *env, emacs_value actual);
 
 /**
  * Return a string from an emacs_value.
@@ -97,14 +72,6 @@ emacs_value em_expand_file_name(emacs_env *env, emacs_value path);
  * @param name Symbol name of the feature to provide.
  */
 void em_provide(emacs_env *env, const char *feature);
-
-/**
- * Check if a value is a user pointer.
- * @param env The active Emacs environment.
- * @param val Value to check.
- * @return True iff val is a user pointer.
- */
-bool em_user_ptrp(emacs_env *env, emacs_value val);
 
 /**
  * make a Emacs list with array
