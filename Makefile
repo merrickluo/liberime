@@ -34,7 +34,9 @@ endif
 ifdef RIME_PATH
 	CFLAGS += -I ${RIME_PATH}/src/
 	LDFLAGS += -L ${RIME_PATH}/build/lib/ -L ${RIME_PATH}/build/lib/Release/
-	LDFLAGS += -Wl,-rpath,${RIME_PATH}/build/lib/:${RIME_PATH}/build/lib/Release $(LIBRIME)
+	LDFLAGS += -Wl,-rpath,${RIME_PATH}/build/lib/
+	LDFLAGS += -Wl,-rpath,${RIME_PATH}/build/lib/Release
+	LDFLAGS += $(LIBRIME)
 else
 	LDFLAGS += $(LIBRIME)
 endif
