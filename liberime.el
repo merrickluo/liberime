@@ -217,7 +217,8 @@ if NAMES is nil, \"rime-data\" as fallback."
                 (if p
                     (concat "CFLAGS += -I " p "/src/\n"
                             "LDFLAGS += -L " p "/build/lib/ -L " p "/build/lib/Release/\n"
-                            "LDFLAGS += -Wl,-rpath," p "/build/lib/:" p "/build/lib/Release\n")
+                            "LDFLAGS += -Wl,-rpath," p "/build/lib/\n"
+                            "LDFLAGS += -Wl,-rpath," p "/build/lib/Release\n")
                   "\n"))
               (concat
                ".PHONY:all objs\n"
