@@ -216,9 +216,12 @@ if NAMES is nil, \"rime-data\" as fallback."
               (let ((p (getenv "RIME_PATH")))
                 (if p
                     (concat "CFLAGS += -I " p "/src/\n"
-                            "LDFLAGS += -L " p "/build/lib/ -L " p "/build/lib/Release/\n"
+                            "LDFLAGS += -L " p "/build/lib/ \n"
+                            "LDFLAGS += -L " p "/build/lib/Release/\n"
+                            "LDFLAGS += -L " p "/dist/lib\n"
                             "LDFLAGS += -Wl,-rpath," p "/build/lib/\n"
-                            "LDFLAGS += -Wl,-rpath," p "/build/lib/Release\n")
+                            "LDFLAGS += -Wl,-rpath," p "/build/lib/Release\n"
+                            "LDFLAGS += -Wl,-rpath," p "/dist/lib\n")
                   "\n"))
               (concat
                ".PHONY:all objs\n"
