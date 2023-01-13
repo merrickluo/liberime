@@ -97,7 +97,7 @@ More info: https://github.com/rime/home/wiki/SharedData"
 if NAMES is nil, \"rime-data\" as fallback."
   (cl-some (lambda (parent)
              (cl-some (lambda (name)
-                        (let ((dir (concat (file-name-as-directory parent) name)))
+                        (let ((dir (expand-file-name name parent)))
                           (when (file-directory-p dir)
                             dir)))
                       (or names '("rime-data"))))
@@ -112,7 +112,12 @@ if NAMES is nil, \"rime-data\" as fallback."
       (cl-case system-type
         ('gnu/linux
          (liberime-find-rime-data
-          '("/usr/share/local" "/usr/share")))
+          '("/usr/share/local"
+            "/usr/share"
+            ;; GuixOS support
+            "~/.guix-home/profile/share"
+            "~/.guix-profile/share"
+            "/run/current-system/profile/share")))
         ('darwin
          "/Library/Input Methods/Squirrel.app/Contents/SharedSupport")
         ('windows-nt
