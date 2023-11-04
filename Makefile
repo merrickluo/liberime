@@ -30,6 +30,9 @@ endif
 ifndef EMACS
 	CFLAGS += -I emacs-module/$(EMACS_MAJOR_VERSION)
 endif
+ifdef EMACS_PLUS_PATH
+       CFLAGS += -I ${EMACS_PLUS_PATH}
+endif
 
 ifdef RIME_PATH
 	CFLAGS += -I ${RIME_PATH}/src/
