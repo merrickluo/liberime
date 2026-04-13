@@ -20,3 +20,4 @@ Debug
 /*.dll
 /*.zip
 /Makefile-liberime-build
+test/test_liberime
