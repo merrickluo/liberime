@@ -219,44 +219,57 @@ static emacs_value _build_candidate_list(emacs_env *env,
   return result;
 }
 
-DOCSTRING(search, "STRING &optional LIMIT",
-          "Input STRING and return LIMIT number candidates.\n"
-          "When LIMIT is nil, return all candidates.");
+DOCSTRING(
+    search, "STRING &optional LIMIT INDEX",
+    "Input STRING and return LIMIT number candidates starting from INDEX.\n"
+    "When LIMIT is nil, return all candidates from INDEX.\n"
+    "When INDEX is nil, start from 0.\n"
+    "This function always uses a separate session to avoid\n"
+    "interfering with current input.");
 static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
                           void *data) {
   EmacsRime *rime = (EmacsRime *)data;
   char *string = em_get_string(env, args[0]);
 
   size_t limit = 0;
-  if (nargs == 2) {
-    if (!env->is_not_nil(env, args[1])) {
-      limit = 0;
-    } else {
-      limit = env->extract_integer(env, args[1]);
-      // if limit set to 0 return nil immediately
-      if (limit == 0) {
-        free(string);
-        return em_nil;
-      }
+  if (nargs >= 2 && env->is_not_nil(env, args[1])) {
+    limit = env->extract_integer(env, args[1]);
+    // if limit set to 0 return nil immediately
+    if (limit == 0) {
+      free(string);
+      return em_nil;
     }
   }
 
-  if (!_ensure_session(rime)) {
-    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+  size_t index = 0;
+  if (nargs >= 3 && env->is_not_nil(env, args[2])) {
+    index = env->extract_integer(env, args[2]);
+  }
+
+  // Always create a new session for search to avoid interfering with
+  // the default session
+  RimeSessionId session_id = rime->api->create_session();
+
+  if (!session_id) {
+    em_signal_rimeerr(env, 1, "Cannot create session.");
+    free(string);
     return em_nil;
   }
 
-  rime->api->clear_composition(rime->session_id);
-  rime->api->simulate_key_sequence(rime->session_id, string);
+  rime->api->clear_composition(session_id);
+  rime->api->simulate_key_sequence(session_id, string);
 
   EmacsRimeCandidates candidates =
-      _get_candidates(rime, rime->session_id, 0, limit);
+      _get_candidates(rime, session_id, index, limit);
 
   // printf("%s: find candidates size: %ld\n", string, candidates.size);
   emacs_value result = _build_candidate_list(env, candidates);
 
   free_candidate_list(candidates.list);
   free(string);
+
+  // Destroy the temporary session
+  rime->api->destroy_session(session_id);
 
   return result;
 }
@@ -1099,7 +1112,7 @@ void liberime_init(emacs_env *env) {
   }
 
   DEFUN("liberime-start", start, 2, 2);
-  DEFUN("liberime-search", search, 1, 2);
+  DEFUN("liberime-search", search, 1, 3);
   DEFUN("liberime-get-candidates", get_candidates, 0, 2);
   DEFUN("liberime-select-schema", select_schema, 1, 1);
   DEFUN("liberime-get-schema-list", get_schema_list, 0, 0);
