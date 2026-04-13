@@ -7,7 +7,10 @@
 #include <unistd.h>
 
 #include "interface.h"
+#include "key_table.h"
 #include "liberime-core.h"
+
+#define XK_VoidSymbol 0xffffff
 
 /**
  * Macro that defines a docstring for a function.
@@ -359,7 +362,15 @@ static emacs_value process_key(emacs_env *env, ptrdiff_t nargs,
 }
 
 DOCSTRING(simulate_key_sequence, "STRING",
-          "Simulate a key sequence STRING to rime session.");
+          "Simulate a key sequence STRING to rime session.\n"
+          "STRING follows librime's KeySequence format:\n"
+          "  - Plain ASCII chars (except '{', '}'): e.g. \"a\", \"1\", \" \"\n"
+          "  - Named keys in braces: \"{Left}\", \"{Return}\", \"{F1}\"\n"
+          "  - With modifiers: \"{Control+a}\", \"{Shift+space}\", \"{Meta+F1}\"\n"
+          "  - Multiple modifiers: \"{Control+Alt+Return}\"\n"
+          "  - Braces themselves: \"{braceleft}\", \"{braceright}\"\n"
+          "Multiple keys are concatenated: \"abc{space}{Return}\"\n"
+          "See also `liberime-kbd-to-key-sequence'.");
 static emacs_value simulate_key_sequence(emacs_env *env, ptrdiff_t nargs,
                                          emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime *)data;
@@ -374,6 +385,89 @@ static emacs_value simulate_key_sequence(emacs_env *env, ptrdiff_t nargs,
   rime->api->simulate_key_sequence(rime->session_id, string);
   free(string);
   return em_t;
+}
+
+/* Convert Emacs EVENT to librime key sequence string.
+   Returns a newly allocated string (caller must free), or NULL on failure. */
+static char *_event_to_key_sequence(emacs_env *env, emacs_value event) {
+  char result[256];
+  result[0] = '\0';
+
+  emacs_value type = env->type_of(env, event);
+
+  if (env->eq(env, type, env->intern(env, "integer"))) {
+    int ev = (int)env->extract_integer(env, event);
+    if (emacs_int_event_to_key_sequence(ev, result, sizeof(result)) != 0) {
+      return NULL;
+    }
+  } else if (env->eq(env, type, env->intern(env, "symbol"))) {
+    /* Symbol event (function key like 'left, 'return, 'F1) */
+    emacs_value symbol_name_result =
+        env->funcall(env, env->intern(env, "symbol-name"), 1, &event);
+    char *sym_name = em_get_string(env, symbol_name_result);
+
+    if (sym_name) {
+      if (emacs_symbol_to_key_sequence(sym_name, result, sizeof(result)) != 0) {
+        free(sym_name);
+        return NULL;
+      }
+      free(sym_name);
+    } else {
+      return NULL;
+    }
+  } else {
+    /* Unsupported type */
+    return NULL;
+  }
+
+  char *out = malloc(strlen(result) + 1);
+  if (out) {
+    strcpy(out, result);
+  }
+  return out;
+}
+
+DOCSTRING(liberime_event_to_key_sequence, "EVENT",
+          "Convert Emacs EVENT to librime key sequence string.\n"
+          "EVENT can be an integer (character with optional modifiers) or a "
+          "symbol (function key like 'left, 'F1).\n"
+          "Returns string like \"a\", \"{Control+a}\", \"{Left}\", "
+          "\"{Control+Left}\".");
+static emacs_value liberime_event_to_key_sequence(emacs_env *env,
+                                                  ptrdiff_t nargs,
+                                                  emacs_value args[],
+                                                  void *data) {
+  char *key_seq = _event_to_key_sequence(env, args[0]);
+  if (!key_seq) {
+    return em_nil;
+  }
+  emacs_value result = env->make_string(env, key_seq, strlen(key_seq));
+  free(key_seq);
+  return result;
+}
+
+DOCSTRING(liberime_process_event, "EVENT",
+          "Process Emacs EVENT by converting to key sequence and sending to "
+          "librime.\n"
+          "EVENT can be an integer (character with optional modifiers) or a "
+          "symbol (function key).");
+static emacs_value liberime_process_event(emacs_env *env, ptrdiff_t nargs,
+                                          emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
+
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    return em_nil;
+  }
+
+  char *key_seq = _event_to_key_sequence(env, args[0]);
+  if (!key_seq) {
+    return em_nil;
+  }
+
+  bool success = rime->api->simulate_key_sequence(rime->session_id, key_seq);
+  free(key_seq);
+  return success ? em_t : em_nil;
 }
 
 DOCSTRING(get_input, "", "Get rime input.");
@@ -966,6 +1060,8 @@ void liberime_init(emacs_env *env) {
   // input
   DEFUN("liberime-process-key", process_key, 1, 2);
   DEFUN("liberime-simulate-key-sequence", simulate_key_sequence, 1, 1);
+  DEFUN("liberime-event-to-key-sequence", liberime_event_to_key_sequence, 1, 1);
+  DEFUN("liberime-process-event", liberime_process_event, 1, 1);
   DEFUN("liberime-commit-composition", commit_composition, 0, 0);
   DEFUN("liberime-clear-composition", clear_composition, 0, 0);
   DEFUN("liberime-select-candidate", select_candidate, 1, 1);

@@ -77,6 +77,8 @@ More info: https://github.com/rime/home/wiki/SharedData"
 (declare-function liberime-get-user-config "ext:src/liberime-core.c")
 (declare-function liberime-process-key "ext:src/liberime-core.c")
 (declare-function liberime-simulate-key-sequence "ext:src/liberime-core.c")
+(declare-function liberime-event-to-key-sequence "ext:src/liberime-core.c")
+(declare-function liberime-process-event "ext:src/liberime-core.c")
 (declare-function liberime-search "ext:src/liberime-core.c")
 (declare-function liberime-select-candidate "ext:src/liberime-core.c")
 (declare-function liberime-select-schema "ext:src/liberime-core.c")
@@ -217,8 +219,8 @@ if NAMES is nil, \"rime-data\" as fallback."
                             (or (locate-library "files") "/usr")))
                      (include-dir (concat (file-name-as-directory path) "include/")))
                 (if (file-exists-p (concat include-dir "emacs-module.h"))
-                    (concat "CFLAGS = -fPIC -O2 -Wall -I " include-dir "\n")
-                  (concat "CFLAGS = -fPIC -O2 -Wall -I emacs-module/" (number-to-string emacs-major-version) "\n")))
+                    (concat "CFLAGS = -fPIC -O2 -Wall -DHAVE_RIME_API -I " include-dir "\n")
+                  (concat "CFLAGS = -fPIC -O2 -Wall -DHAVE_RIME_API -I emacs-module/" (number-to-string emacs-major-version) "\n")))
               (let ((p (getenv "RIME_PATH")))
                 (if p
                     (concat "CFLAGS += -I " p "/src/\n"
@@ -325,6 +327,76 @@ this function will go to proper page then select a candidate."
   "Clear the lastest rime commit."
   ;; NEED IMPROVE: Second run `liberime-get-commit' will clear commit.
   (liberime-get-commit))
+
+(defun liberime-kbd-to-key-sequence (keys)
+  "Convert Emacs key sequence KEYS to librime key sequence string.
+
+KEYS is a key sequence (vector or string) as returned by `kbd', or a
+plain string whose characters are treated as individual key events.
+Each event is converted via `liberime-event-to-key-sequence' and the
+results are concatenated.
+
+See also `liberime-simulate-key-sequence'.
+
+The output format follows librime's `KeySequence::Parse' convention
+(see librime/src/rime/key_event.cc):
+  - Plain printable ASCII (except `{` and `}`): output directly,
+    e.g. \"a\", \"1\"
+  - Named keys (Left, Return, F1, etc.): wrapped in braces,
+    e.g. \"{Left}\", \"{F1}\"
+  - Keys with modifiers: \"{Control+a}\", \"{Control+Left}\",
+    \"{Meta+F1}\"
+  - Braces `{` and `}` always use names: \"{braceleft}\",
+    \"{braceright}\"
+
+Examples:
+  (liberime-kbd-to-key-sequence (kbd \"a\"))       => \"a\"
+  (liberime-kbd-to-key-sequence (kbd \"C-a\"))     => \"{Control+a}\"
+  (liberime-kbd-to-key-sequence (kbd \"C-M-a\"))   => \"{Control+Meta+a}\"
+  (liberime-kbd-to-key-sequence (kbd \"<left>\"))  => \"{Left}\"
+  (liberime-kbd-to-key-sequence (kbd \"C-<left>\")) => \"{Control+Left}\"
+  (liberime-kbd-to-key-sequence (kbd \"C-<f1>\"))  => \"{Control+F1}\"
+  (liberime-kbd-to-key-sequence (kbd \"{\") )      => \"{braceleft}\"
+  (liberime-kbd-to-key-sequence (kbd \"C-M-<left>\"))
+    => \"{Control+Meta+Left}\"
+
+Multiple keys in a sequence are concatenated:
+  (liberime-kbd-to-key-sequence \"abc\")            => \"abc\"
+  (liberime-kbd-to-key-sequence (kbd \"C-a C-b\"))
+    => \"{Control+a}{Control+b}\""
+  (let ((sequences "")
+        sequence)
+    (dolist (event (listify-key-sequence keys))
+      (setq sequence (liberime-event-to-key-sequence event))
+      (setq sequences (concat sequences sequence)))
+    sequences))
+
+(defun liberime-process-keys (keys)
+  "Process a sequence of KEYS by sending each event to librime.
+
+KEYS is a key sequence (vector or string) as returned by `kbd', or a
+plain string whose characters are treated as individual key events.
+Each event is converted via `liberime-process-event' and sent to
+librime in order.
+
+This is the main entry point for feeding keystrokes to librime,
+typically used in input method event handlers.
+
+Examples:
+  ;; Single keystroke
+  (liberime-process-keys \"a\")
+
+  ;; Multiple keystrokes
+  (liberime-process-keys \"zhongwen\")
+
+  ;; Control/meta combinations
+  (liberime-process-keys (kbd \"C-<return>\"))
+  (liberime-process-keys (kbd \"C-<SPC>\"))
+
+  ;; Function keys
+  (liberime-process-keys (kbd \"<f1>\"))"
+  (dolist (event (listify-key-sequence keys))
+    (liberime-process-event event)))
 
 ;;;###autoload
 (defun liberime-deploy()
