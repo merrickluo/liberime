@@ -388,6 +388,14 @@ User should specify sync_dir in installation.yaml file of
   (interactive)
   (liberime-sync-user-data))
 
+(defun liberime--finalize-on-exit ()
+  "Finalize librime when Emacs is about to exit."
+  (when (featurep 'liberime-core)
+    (ignore-errors (liberime-finalize))))
+
+(add-hook 'kill-emacs-hook #'liberime--finalize-on-exit)
+
+
 (provide 'liberime)
 
 ;;; liberime.el ends here
