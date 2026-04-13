@@ -97,16 +97,21 @@ static char *_copy_string(char *str) {
   }
 }
 
-EmacsRimeCandidates _get_candidates(EmacsRime *rime, size_t limit) {
+EmacsRimeCandidates _get_candidates(EmacsRime *rime, RimeSessionId session_id,
+                                    size_t index, size_t limit) {
   EmacsRimeCandidates c = {
       .size = 0,
       .list = (CandidateLinkedList *)malloc(sizeof(CandidateLinkedList))};
 
   RimeCandidateListIterator iterator = {0};
   CandidateLinkedList *next = c.list;
-  if (rime->api->candidate_list_begin(rime->session_id, &iterator)) {
-    while (rime->api->candidate_list_next(&iterator) &&
-           (limit == 0 || c.size < limit)) {
+  if (rime->api->candidate_list_from_index(session_id, &iterator, index)) {
+    while (rime->api->candidate_list_next(&iterator)) {
+      // If limit is set and we've reached the limit, stop
+      if (limit > 0 && c.size >= limit) {
+        break;
+      }
+
       c.size += 1;
 
       next->text = _copy_string(iterator.candidate.text);
@@ -186,6 +191,34 @@ void free_candidate_list(CandidateLinkedList *list) {
   }
 }
 
+/**
+ * Build emacs list from candidates.
+ */
+static emacs_value _build_candidate_list(emacs_env *env,
+                                         EmacsRimeCandidates candidates) {
+  if (candidates.size == 0) {
+    return em_nil;
+  }
+
+  emacs_value *array = malloc(sizeof(emacs_value) * candidates.size);
+  CandidateLinkedList *next = candidates.list;
+  int i = 0;
+  while (next && i < candidates.size) {
+    emacs_value value = env->make_string(env, next->text, strlen(next->text));
+    if (next->comment) {
+      emacs_value comment =
+          env->make_string(env, next->comment, strlen(next->comment));
+      value = em_propertize(env, value, ":comment", comment);
+    }
+    array[i++] = value;
+    next = next->next;
+  }
+
+  emacs_value result = em_list(env, candidates.size, array);
+  free(array);
+  return result;
+}
+
 DOCSTRING(search, "STRING &optional LIMIT",
           "Input STRING and return LIMIT number candidates.\n"
           "When LIMIT is nil, return all candidates.");
@@ -216,38 +249,50 @@ static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
   rime->api->clear_composition(rime->session_id);
   rime->api->simulate_key_sequence(rime->session_id, string);
 
-  EmacsRimeCandidates candidates = _get_candidates(rime, limit);
+  EmacsRimeCandidates candidates =
+      _get_candidates(rime, rime->session_id, 0, limit);
 
   // printf("%s: find candidates size: %ld\n", string, candidates.size);
-  // return nil if no candidates found
-  if (candidates.size == 0) {
-    free_candidate_list(candidates.list);
-    free(string);
+  emacs_value result = _build_candidate_list(env, candidates);
+
+  free_candidate_list(candidates.list);
+  free(string);
+
+  return result;
+}
+
+DOCSTRING(
+    get_candidates, "&optional LIMIT INDEX",
+    "Get current candidates from the default session.\n"
+    "LIMIT is max candidates to return, default all.\n"
+    "INDEX is the starting position (0-based), default 0.\n"
+    "Unlike search, this does NOT clear composition or simulate key sequence.");
+static emacs_value get_candidates(emacs_env *env, ptrdiff_t nargs,
+                                  emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
     return em_nil;
   }
 
-  emacs_value *array = malloc(sizeof(emacs_value) * candidates.size);
-
-  CandidateLinkedList *next = candidates.list;
-  int i = 0;
-  while (next && i < candidates.size) {
-    emacs_value value = env->make_string(env, next->text, strlen(next->text));
-    if (next->comment) {
-      emacs_value comment =
-          env->make_string(env, next->comment, strlen(next->comment));
-      value = em_propertize(env, value, ":comment", comment);
+  size_t limit = 0;
+  if (nargs >= 1 && env->is_not_nil(env, args[0])) {
+    limit = env->extract_integer(env, args[0]);
+    if (limit == 0) {
+      return em_nil;
     }
-    array[i++] = value;
-    next = next->next;
   }
-  // printf("conveted array size: %d\n", i);
 
-  emacs_value result = em_list(env, candidates.size, array);
+  size_t index = 0;
+  if (nargs >= 2 && env->is_not_nil(env, args[1])) {
+    index = env->extract_integer(env, args[1]);
+  }
 
-  // free(candidates.candidates);
+  EmacsRimeCandidates candidates =
+      _get_candidates(rime, rime->session_id, index, limit);
+
+  emacs_value result = _build_candidate_list(env, candidates);
   free_candidate_list(candidates.list);
-  free(array);
-  free(string);
 
   return result;
 }
@@ -321,7 +366,7 @@ static emacs_value select_schema(emacs_env *env, ptrdiff_t nargs,
                                  emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime *)data;
   const char *schema_id = em_get_string(env, args[0]);
-  
+
   if (!_ensure_session(rime)) {
     em_signal_rimeerr(env, 1, NO_SESSION_ERR);
     free((char *)schema_id);
@@ -330,7 +375,7 @@ static emacs_value select_schema(emacs_env *env, ptrdiff_t nargs,
 
   bool result = rime->api->select_schema(rime->session_id, schema_id);
   free((char *)schema_id);
-  
+
   if (result) {
     return em_t;
   }
@@ -361,16 +406,17 @@ static emacs_value process_key(emacs_env *env, ptrdiff_t nargs,
   return em_nil;
 }
 
-DOCSTRING(simulate_key_sequence, "STRING",
-          "Simulate a key sequence STRING to rime session.\n"
-          "STRING follows librime's KeySequence format:\n"
-          "  - Plain ASCII chars (except '{', '}'): e.g. \"a\", \"1\", \" \"\n"
-          "  - Named keys in braces: \"{Left}\", \"{Return}\", \"{F1}\"\n"
-          "  - With modifiers: \"{Control+a}\", \"{Shift+space}\", \"{Meta+F1}\"\n"
-          "  - Multiple modifiers: \"{Control+Alt+Return}\"\n"
-          "  - Braces themselves: \"{braceleft}\", \"{braceright}\"\n"
-          "Multiple keys are concatenated: \"abc{space}{Return}\"\n"
-          "See also `liberime-kbd-to-key-sequence'.");
+DOCSTRING(
+    simulate_key_sequence, "STRING",
+    "Simulate a key sequence STRING to rime session.\n"
+    "STRING follows librime's KeySequence format:\n"
+    "  - Plain ASCII chars (except '{', '}'): e.g. \"a\", \"1\", \" \"\n"
+    "  - Named keys in braces: \"{Left}\", \"{Return}\", \"{F1}\"\n"
+    "  - With modifiers: \"{Control+a}\", \"{Shift+space}\", \"{Meta+F1}\"\n"
+    "  - Multiple modifiers: \"{Control+Alt+Return}\"\n"
+    "  - Braces themselves: \"{braceleft}\", \"{braceright}\"\n"
+    "Multiple keys are concatenated: \"abc{space}{Return}\"\n"
+    "See also `liberime-kbd-to-key-sequence'.");
 static emacs_value simulate_key_sequence(emacs_env *env, ptrdiff_t nargs,
                                          emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime *)data;
@@ -773,7 +819,7 @@ static emacs_value get_user_config(emacs_env *env, ptrdiff_t nargs,
   if (nargs == 3) {
     free(config_type);
   }
-  
+
   if (!success) {
     em_signal_rimeerr(env, 2, "Failed to get config.");
     return em_nil;
@@ -883,7 +929,7 @@ static emacs_value get_schema_config(emacs_env *env, ptrdiff_t nargs,
 
     strcpy(schema_id, arg0);
   }
-  
+
   free((char *)arg0);
 
   if (strlen(schema_id) == 0) {
@@ -937,7 +983,7 @@ static emacs_value get_schema_config(emacs_env *env, ptrdiff_t nargs,
   if (nargs == 3) {
     free(config_type);
   }
-  
+
   if (!success) {
     em_signal_rimeerr(env, 2, "Failed to get config.");
     return em_nil;
@@ -985,7 +1031,7 @@ static emacs_value set_schema_config(emacs_env *env, ptrdiff_t nargs,
 
     strcpy(schema_id, arg0);
   }
-  
+
   free((char *)arg0);
 
   if (strlen(schema_id) == 0) {
@@ -1054,6 +1100,7 @@ void liberime_init(emacs_env *env) {
 
   DEFUN("liberime-start", start, 2, 2);
   DEFUN("liberime-search", search, 1, 2);
+  DEFUN("liberime-get-candidates", get_candidates, 0, 2);
   DEFUN("liberime-select-schema", select_schema, 1, 1);
   DEFUN("liberime-get-schema-list", get_schema_list, 0, 0);
 
