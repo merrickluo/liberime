@@ -346,6 +346,24 @@ static emacs_value process_key(emacs_env *env, ptrdiff_t nargs,
   return em_nil;
 }
 
+DOCSTRING(simulate_key_sequence, "STRING",
+          "Simulate a key sequence STRING to rime session.");
+static emacs_value simulate_key_sequence(emacs_env *env, ptrdiff_t nargs,
+                                         emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
+  char *string = em_get_string(env, args[0]);
+
+  if (!_ensure_session(rime)) {
+    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+    free(string);
+    return em_nil;
+  }
+
+  rime->api->simulate_key_sequence(rime->session_id, string);
+  free(string);
+  return em_t;
+}
+
 DOCSTRING(get_input, "", "Get rime input.");
 static emacs_value get_input(emacs_env *env, ptrdiff_t nargs,
                              emacs_value args[], void *data) {
@@ -867,6 +885,7 @@ void liberime_init(emacs_env *env) {
 
   // input
   DEFUN("liberime-process-key", process_key, 1, 2);
+  DEFUN("liberime-simulate-key-sequence", simulate_key_sequence, 1, 1);
   DEFUN("liberime-commit-composition", commit_composition, 0, 0);
   DEFUN("liberime-clear-composition", clear_composition, 0, 0);
   DEFUN("liberime-select-candidate", select_candidate, 1, 1);

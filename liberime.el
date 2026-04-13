@@ -76,6 +76,7 @@ More info: https://github.com/rime/home/wiki/SharedData"
 (declare-function liberime-get-sync-dir "ext:src/liberime-core.c")
 (declare-function liberime-get-user-config "ext:src/liberime-core.c")
 (declare-function liberime-process-key "ext:src/liberime-core.c")
+(declare-function liberime-simulate-key-sequence "ext:src/liberime-core.c")
 (declare-function liberime-search "ext:src/liberime-core.c")
 (declare-function liberime-select-candidate "ext:src/liberime-core.c")
 (declare-function liberime-select-schema "ext:src/liberime-core.c")
