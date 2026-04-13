@@ -11,6 +11,21 @@ ifneq (,$(findstring MINGW,$(UNAME_S)))
 	LIBRIME = -llibrime
 endif
 
+## macOS
+ifneq (,$(findstring Darwin,$(UNAME_S)))
+	SUFFIX = .dylib
+	CC = clang
+	# 使用 pkg-config 获取 brew 安装的 librime 编译参数
+	ifneq (,$(shell which pkg-config 2>/dev/null))
+		RIME_CFLAGS := $(shell pkg-config --cflags rime 2>/dev/null)
+		RIME_LDFLAGS := $(shell pkg-config --libs rime 2>/dev/null)
+		ifneq (,$(RIME_CFLAGS))
+			CFLAGS += $(RIME_CFLAGS)
+			LIBRIME = $(RIME_LDFLAGS)
+		endif
+	endif
+endif
+
 ifdef MODULE_FILE_SUFFIX
 	SUFFIX = $(MODULE_FILE_SUFFIX)
 endif
@@ -22,15 +37,13 @@ SRC = src
 SOURCES = $(wildcard $(SRC)/*.c)
 OBJS = $(patsubst %.c, %.o, $(SOURCES))
 TARGET = $(SRC)/liberime-core$(SUFFIX)
-CFLAGS += -fPIC -O2 -Wall
+CFLAGS += -fPIC -O2 -Wall -DHAVE_RIME_API
 
 ifndef EMACS_MAJOR_VERSION
-	EMACS_MAJOR_VERSION = 26
+	EMACS_MAJOR_VERSION := $(shell emacs --batch --eval '(princ emacs-major-version)' 2>/dev/null || echo 26)
 endif
 
-ifndef EMACS
-	CFLAGS += -I emacs-module/$(EMACS_MAJOR_VERSION)
-endif
+CFLAGS += -I emacs-module/$(EMACS_MAJOR_VERSION)
 ifdef EMACS_PLUS_PATH
        CFLAGS += -I ${EMACS_PLUS_PATH}
 endif
@@ -53,14 +66,33 @@ all:$(TARGET)
 objs:$(OBJS)
 
 clean:
-	rm -rf $(OBJS) $(TARGET) build
+	rm -rf $(OBJS) $(TARGET) build test/test_liberime *.elc test/*.elc
 
 $(TARGET):$(OBJS)
 	rm -rf build
 	$(CC) $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
-test:$(TARGET)
-	${EMACS} -Q -L $(SRC) -L . liberime-test.el
+
+# Run integration tests (requires compiled C module + librime)
+.PHONY: test-integration
+test-integration: $(TARGET)
+	emacs --batch -Q -L . -L test \
+	  -l ert \
+	  -l test/liberime-test.el \
+	  -f liberime-test-run
+
+# Run C unit tests (standalone, no Emacs needed)
+.PHONY: test-c
+test-c: test/test_liberime
+	./test/test_liberime
+
+test/test_liberime: test/test_liberime.c
+	# $(CC) -o test/test_liberime test/test_liberime.c -Isrc -DHAVE_RIME_API -fPIC -O2 -Wall -lrime
+	$(CC) -O2 -Wall -o $@ $<
+
+# Run all tests
+.PHONY: test
+test: test-c test-integration
 
 liberime-build:
 	make -f Makefile-liberime-build
