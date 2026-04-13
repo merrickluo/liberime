@@ -122,12 +122,14 @@ emacs_value em_propertize(emacs_env *env, emacs_value target, const char *key,
 }
 
 emacs_value em_string(emacs_env *env, char *str) {
-  // always copy string
   if (str) {
     size_t size = strnlen(str, MAX_STRLEN);
     char *new_str = malloc(size + 1);
     strncpy(new_str, str, size);
-    return env->make_string(env, new_str, size);
+    new_str[size] = '\0';
+    emacs_value result = env->make_string(env, new_str, size);
+    free(new_str);
+    return result;
   } else {
     return em_nil;
   }
