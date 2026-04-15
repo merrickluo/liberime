@@ -80,6 +80,7 @@ More info: https://github.com/rime/home/wiki/SharedData"
 (declare-function liberime-event-to-key-sequence "ext:src/liberime-core.c")
 (declare-function liberime-process-event "ext:src/liberime-core.c")
 (declare-function liberime-search "ext:src/liberime-core.c")
+(declare-function liberime-get-candidates "ext:src/liberime-core.c")
 (declare-function liberime-select-candidate "ext:src/liberime-core.c")
 (declare-function liberime-select-schema "ext:src/liberime-core.c")
 (declare-function liberime-set-schema-config "ext:src/liberime-core.c")
