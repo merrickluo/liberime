@@ -386,12 +386,32 @@ static emacs_value select_schema(emacs_env *env, ptrdiff_t nargs,
     return em_nil;
   }
 
-  bool result = rime->api->select_schema(rime->session_id, schema_id);
-  free((char *)schema_id);
+  RimeSchemaList schema_list;
+  if (!rime->api->get_schema_list(&schema_list)) {
+    em_signal_rimeerr(env, 1, "Get schema list from librime failed.");
+    free((char *)schema_id);
+    return em_nil;
+  }
 
-  if (result) {
+  bool found = false;
+  for (int i = 0; i < schema_list.size; i++) {
+    if (strcmp(schema_list.list[i].schema_id, schema_id) == 0) {
+      found = true;
+      break;
+    }
+  }
+  rime->api->free_schema_list(&schema_list);
+
+  if (!found) {
+    free((char *)schema_id);
+    return em_nil;
+  }
+
+  if (rime->api->select_schema(rime->session_id, schema_id)) {
+    free((char *)schema_id);
     return em_t;
   }
+  free((char *)schema_id);
   return em_nil;
 }
 
