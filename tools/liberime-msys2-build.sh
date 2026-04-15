@@ -20,6 +20,9 @@ RIME_DATA_DIR="${MINGW_PREFIX}/share/rime-data"
 # archive name
 ARCHIVE_NAME=""
 
+# with dependencies
+WITH_DEPS=false
+
 #######################################
 # 复制所有dll依赖到指定目录
 # Arguments:
@@ -97,35 +100,31 @@ function archive_liberime() {
         zip_file="${PWD}/liberime-windows-${ARCH}.zip"
     fi
 
-    local temp_dir="temp"
+    local archive_dir="${ARCHIVE_NAME:-liberime-windows-${ARCH}}"
 
-    install -Dm644 tools/README-archive.txt ${temp_dir}/README.txt
+    install -Dm644 liberime.el -t ${archive_dir}/share/emacs/site-lisp/
+    install -Dm644 src/liberime-core.dll -t ${archive_dir}/bin/
 
-    install -Dm644 liberime.el -t ${temp_dir}/share/emacs/site-lisp/liberime/
-    install -Dm644 src/liberime-core.dll -t ${temp_dir}/share/emacs/site-lisp/liberime/
 
-    install -Dm644 ${MINGW_PREFIX}/bin/librime.dll -t ${temp_dir}/bin/
-    install_all_dll ${MINGW_PREFIX}/bin/librime.dll    \
-                    ${temp_dir}/bin/                   \
-                    "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
+    if [[ "${WITH_DEPS}" == "true" ]]; then
+        echo "Including dependencies..."
+        install -Dm644 ${MINGW_PREFIX}/bin/librime-1.dll -t ${archive_dir}/bin/
+        install_all_dll ${MINGW_PREFIX}/bin/librime-1.dll    \
+                        ${archive_dir}/bin/                   \
+                        "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
+        install -Dm644 ${INSTALL_PREFIX}/lib/librime* -t ${archive_dir}/lib/
+        install -Dm644 ${INSTALL_PREFIX}/include/rime* -t ${archive_dir}/include/
+        install -Dm644 ${INSTALL_PREFIX}/share/opencc/* -t ${archive_dir}/share/rime-data/opencc/
+        install -Dm644 ${RIME_DATA_DIR}/*.* -t ${archive_dir}/share/rime-data/
+        install -Dm644 ${RIME_DATA_DIR}/opencc/* -t ${archive_dir}/share/rime-data/opencc/
+    fi
 
-    install -Dm644 ${INSTALL_PREFIX}/lib/librime* -t ${temp_dir}/lib/
-    install -Dm644 ${INSTALL_PREFIX}/include/rime* -t ${temp_dir}/include/
-
-    install -Dm644 ${INSTALL_PREFIX}/share/opencc/* -t ${temp_dir}/share/rime-data/opencc/
-
-    install -Dm644 ${RIME_DATA_DIR}/*.* -t ${temp_dir}/share/rime-data/
-
-    ## 有些 rime schema 会自带 opencc 文件，保存在 rime-data/opencc 目录下面。
-    ## 比如： rime-emoji
-    install -Dm644 ${RIME_DATA_DIR}/opencc/* -t ${temp_dir}/share/rime-data/opencc/
-
-    cd ${temp_dir}
+    cd ${archive_dir}
     zip -r "${zip_file}" . > /dev/null
-    
+
     cd ..
-    rm -rf ${temp_dir}
-    
+    rm -rf ${archive_dir}
+
     echo "Archive liberime to file: ${zip_file}"
 }
 
@@ -138,6 +137,8 @@ function display_usage() {
 选项:
 
     -a, --archive=FILENAME      打包名称
+
+    -d, --with-deps             包含依赖（librime库、头文件、rime-data等）
 
     -h, --help                  查看帮助
 
@@ -156,6 +157,10 @@ function main() {
                 ARCHIVE_NAME="$2";
                 shift 2
                 ;;
+            -d|--with-deps)
+                WITH_DEPS=true;
+                shift
+                ;;
             --)
                 shift
                 break
@@ -172,7 +177,7 @@ function main() {
 }
 
 # 选项
-ARGS=$(getopt -o ha:a: --long help,archive:,archive: -n "$0" -- "$@")
+ARGS=$(getopt -o ha:dh --long help,archive:,with-deps -n "$0" -- "$@")
 
 
 if [[ $? != 0 ]]; then

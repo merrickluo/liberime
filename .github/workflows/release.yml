@@ -1,0 +1,283 @@
+name: Release
+
+on:
+  push:
+    # branches: [master]
+    tags:
+      - 'v*'
+  workflow_dispatch:   # run manually
+
+jobs:
+  build-windows:
+    permissions:
+      contents: write
+    runs-on: ${{ matrix.arch == 'CLANGARM64' && 'windows-11-arm' || 'windows-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: MINGW64
+            pkg_prefix: mingw-w64-x86_64
+            base_archive: liberime-${{ github.ref_name }}-windows-x86_64
+            with_deps: false
+          - arch: MINGW64
+            pkg_prefix: mingw-w64-x86_64
+            base_archive: liberime-${{ github.ref_name }}-windows-x86_64
+            with_deps: true
+          - arch: UCRT64
+            pkg_prefix: mingw-w64-ucrt-x86_64
+            base_archive: liberime-${{ github.ref_name }}-windows-ucrt-x86_64
+            with_deps: false
+          - arch: UCRT64
+            pkg_prefix: mingw-w64-ucrt-x86_64
+            base_archive: liberime-${{ github.ref_name }}-windows-ucrt-x86_64
+            with_deps: true
+          - arch: CLANG64
+            pkg_prefix: mingw-w64-clang-x86_64
+            base_archive: liberime-${{ github.ref_name }}-windows-clang-x86_64
+            with_deps: false
+          - arch: CLANG64
+            pkg_prefix: mingw-w64-clang-x86_64
+            base_archive: liberime-${{ github.ref_name }}-windows-clang-x86_64
+            with_deps: true
+          - arch: CLANGARM64
+            pkg_prefix: mingw-w64-clang-aarch64
+            base_archive: liberime-${{ github.ref_name }}-windows-clang-arm64
+            with_deps: false
+          - arch: CLANGARM64
+            pkg_prefix: mingw-w64-clang-aarch64
+            base_archive: liberime-${{ github.ref_name }}-windows-clang-arm64
+            with_deps: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.arch }}
+          update: true
+          install: |
+            ${{ matrix.pkg_prefix }}-gcc
+            ${{ matrix.pkg_prefix }}-librime
+            ${{ matrix.pkg_prefix }}-librime-data
+            ${{ matrix.pkg_prefix }}-rime-wubi
+            ${{ matrix.pkg_prefix }}-rime-double-pinyin
+            ${{ matrix.pkg_prefix }}-rime-emoji
+
+      - name: Build
+        shell: msys2 {0}
+        env:
+          MSYSTEM: ${{ matrix.arch }}
+          ARCHIVE_BASE: ${{ matrix.base_archive }}
+          WITH_DEPS: ${{ matrix.with_deps }}
+        run: |
+          if [[ "${WITH_DEPS}" == "true" ]]; then
+            ARCHIVE_NAME="${ARCHIVE_BASE}-with-deps"
+            BUILD_ARGS="--archive=${ARCHIVE_NAME} --with-deps"
+          else
+            ARCHIVE_NAME="${ARCHIVE_BASE}"
+            BUILD_ARGS="--archive=${ARCHIVE_NAME}"
+          fi
+          bash tools/liberime-msys2-build.sh $BUILD_ARGS
+          echo "ARCHIVE_NAME=${ARCHIVE_NAME}" >> $GITHUB_ENV
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARCHIVE_NAME }}
+          path: ${{ env.ARCHIVE_NAME }}.zip
+          retention-days: 1
+
+  build-linux:
+    permissions:
+      contents: write
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+            archive: liberime-${{ github.ref_name }}-linux-x86_64
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            archive: liberime-${{ github.ref_name }}-linux-aarch64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            archive: liberime-${{ github.ref_name }}-linux-arm64
+          - arch: armhf
+            runner: ubuntu-latest
+            archive: liberime-${{ github.ref_name }}-linux-armhf
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            libgoogle-glog-dev \
+            libgflags-dev \
+            libleveldb-dev \
+            libmarisa-dev \
+            libopencc-dev \
+            libyaml-cpp-dev \
+            libboost-all-dev \
+            librime-dev \
+            librime-data
+
+      - name: Build
+        run: |
+          make clean
+          make
+
+      - name: Archive
+        run: |
+          ARCHIVE_NAME="${{ matrix.archive }}"
+          mkdir -p ${ARCHIVE_NAME}/{share/emacs/site-lisp,lib}
+          cp liberime.el ${ARCHIVE_NAME}/share/emacs/site-lisp/
+          cp src/liberime-core.so ${ARCHIVE_NAME}/lib/
+
+          tar -czf ${ARCHIVE_NAME}.tar.gz ${ARCHIVE_NAME}/
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive }}
+          path: ${{ matrix.archive }}.tar.gz
+          retention-days: 1
+
+  build-macos:
+    permissions:
+      contents: write
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: macos-14
+            archive: liberime-${{ github.ref_name }}-macos-x86_64
+          - arch: arm64
+            runner: macos-latest
+            archive: liberime-${{ github.ref_name }}-macos-arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          brew update
+          brew install librime
+
+      - name: Setup pkg-config path
+        run: |
+          echo "PKG_CONFIG_PATH=$(brew --prefix)/lib/pkgconfig" >> $GITHUB_ENV
+
+      - name: Build
+        run: |
+          make clean
+          make
+
+      - name: Archive
+        run: |
+          ARCHIVE_NAME="${{ matrix.archive }}"
+          mkdir -p ${ARCHIVE_NAME}/{share/emacs/site-lisp,lib}
+          cp liberime.el ${ARCHIVE_NAME}/share/emacs/site-lisp/
+          cp src/liberime-core.dylib ${ARCHIVE_NAME}/lib/
+
+          tar -czf ${ARCHIVE_NAME}.tar.gz ${ARCHIVE_NAME}/
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive }}
+          path: ${{ matrix.archive }}.tar.gz
+          retention-days: 1
+
+  build-linux-verify:
+    needs: build-linux
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+          - arch: armhf
+            runner: ubuntu-latest
+        emacs_version:
+          - '29.4'
+          - '30.1'
+          - 'snapshot'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: purcell/setup-emacs@master
+        with:
+          version: ${{ matrix.emacs_version }}
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            libgoogle-glog-dev \
+            libgflags-dev \
+            libleveldb-dev \
+            libmarisa-dev \
+            libopencc-dev \
+            libyaml-cpp-dev \
+            libboost-all-dev \
+            librime-dev \
+            librime-data
+
+      - name: Build & Verify
+        run: |
+          make clean
+          make
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-linux, build-macos, build-linux-verify]
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Debug - Show downloaded files
+        run: |
+          echo "=== All downloaded artifacts ==="
+          find artifacts/ -type f | sort
+          echo "=== File details ==="
+          find artifacts/ -type f -exec file {} \;
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release-files
+          # Collect all archive files directly into release-files/
+          find artifacts/ -type f \( -name "*.tar.gz" -o -name "*.zip" \) -print0 | while IFS= read -r -d '' f; do
+            echo "Copying: $f"
+            cp "$f" release-files/
+          done
+          echo "=== Files to upload ==="
+          ls -lh release-files/
+          file release-files/*
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-files/*
+          draft: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,77 @@
+name: test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:   # run manually
+
+jobs:
+  byte-compile:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        emacs_version:
+          - '26.3'
+          - '27.2'
+          - '28.2'
+          - '29.4'
+          - '30.1'
+          - 'snapshot'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: purcell/setup-emacs@master
+        with:
+          version: ${{ matrix.emacs_version }}
+
+      - name: Byte-compile
+        run: |
+          # liberime.el calls (liberime-load) at top-level, which does
+          # (require 'liberime-core nil t) with a LOCAL load-path that
+          # only searches the package directory -- so putting a stub on
+          # the global load-path does not work.  We must provide the
+          # 'liberime-core feature BEFORE liberime.el is loaded.
+          emacs --batch -Q \
+            -L . \
+            --eval "(provide 'liberime-core)" \
+            --eval "(setq byte-compile-error-on-warn t)" \
+            -f batch-byte-compile \
+            liberime.el
+
+  test-c:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and run C unit tests
+        run: |
+          gcc -O2 -Wall -o test/test_liberime test/test_liberime.c
+          ./test/test_liberime
+
+  test-integration:
+    # Integration tests load the C dynamic module which links against
+    # system librime and its transitive deps (libglog, libleveldb, etc.).
+    # purcell/setup-emacs provides a Nix-built Emacs with a patched
+    # dynamic linker that ignores system library paths entirely.
+    # Neither LD_LIBRARY_PATH (breaks Nix's own libc/libjansson) nor
+    # RUNPATH (doesn't propagate to transitive deps) can fix this.
+    # Solution: use the system Emacs from apt for integration tests.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Emacs and librime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y emacs-nox librime-dev librime-data
+
+      - name: Build C module
+        run: make clean && make
+
+      - name: Run integration tests
+        run: |
+          emacs --batch -Q -L . -L test \
+            -l ert \
+            -l test/liberime-test.el \
+            -f liberime-test-run

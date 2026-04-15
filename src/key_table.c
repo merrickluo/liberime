@@ -9,6 +9,11 @@
 #define XK_VoidSymbol 0xffffff
 #endif
 
+typedef struct {
+  const char *emacs_name;
+  const char *x_name;
+} emacs_x_key_map_t;
+
 static const char *modifier_name[] = {
     "Shift",                           // 0
     "Lock",                            // 1
@@ -2050,6 +2055,13 @@ const char *rime_get_key_name(int keycode) {
  * Emacs event to key sequence conversion
  * ======================================================================== */
 
+static const emacs_x_key_map_t emacs_to_x_keys[] = {
+    {"backspace", "BackSpace"}, {"delete", "Delete"},
+    {"return", "Return"},       {"escape", "Escape"},
+    {"pageup", "Prior"},        {"pagedown", "Next"},
+    {"prior", "Prior"},         {"next", "Next"},
+    {"space", "space"},         {NULL, NULL}};
+
 int emacs_event_keycode(int event) { return event & 0x1FFFFF; }
 
 int emacs_event_has_modifier(int event) {
@@ -2178,6 +2190,7 @@ int emacs_symbol_to_key_sequence(const char *sym_name, char *buf,
 
   char tmp[256];
   tmp[0] = '\0';
+  const char *std_name = NULL;
 
   /* Parse modifier prefixes from symbol name.
      Emacs sends "C-left", "M-f1", "C-M-return" etc. for modifier + named keys.
@@ -2215,21 +2228,10 @@ int emacs_symbol_to_key_sequence(const char *sym_name, char *buf,
   }
 no_more_mods:
 
-  /* Common Emacs symbol → X11 key name mappings (case-sensitive) */
-  static const struct {
-    const char *emacs_name;
-    const char *x_name;
-  } special_keys[] = {{"backspace", "BackSpace"}, {"delete", "Delete"},
-                      {"return", "Return"},       {"escape", "Escape"},
-                      {"pageup", "Prior"},        {"pagedown", "Next"},
-                      {"prior", "Prior"},         {"next", "Next"},
-                      {"space", "space"},         {NULL, NULL}};
-
   /* Check special keys first */
-  const char *std_name = NULL;
-  for (int i = 0; special_keys[i].emacs_name; i++) {
-    if (strcmp(key_part, special_keys[i].emacs_name) == 0) {
-      std_name = special_keys[i].x_name;
+  for (int i = 0; emacs_to_x_keys[i].emacs_name; i++) {
+    if (strcmp(key_part, emacs_to_x_keys[i].emacs_name) == 0) {
+      std_name = emacs_to_x_keys[i].x_name;
       break;
     }
   }
