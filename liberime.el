@@ -32,8 +32,6 @@
   :group 'liberime
   :type 'hook)
 
-(make-obsolete-variable 'after-liberime-load-hook 'liberime-after-start-hook "2019-12-13")
-
 (defcustom liberime-module-file nil
   "Liberime module file on the system.
 When it is nil, librime will auto search module in many path."
