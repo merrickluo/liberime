@@ -142,9 +142,9 @@ if NAMES is nil, \"rime-data\" as fallback."
 (defun liberime-get-user-data-dir ()
   "Return user data directory, create it if necessary."
   (let ((directory (expand-file-name liberime-user-data-dir)))
-    (unless (file-directory-p directory)
-      (make-directory directory t))
-    directory))
+    (ignore-errors
+      (make-directory directory t)
+      directory)))
 
 (declare-function w32-shell-execute "w32fns")
 
@@ -164,25 +164,29 @@ if NAMES is nil, \"rime-data\" as fallback."
 (defun liberime-open-user-data-dir ()
   "Open user data dir with external app."
   (interactive)
-  (liberime-open-directory (liberime-get-user-data-dir)))
+  (when-let ((user-dir (liberime-get-user-data-dir)))
+    (liberime-open-directory user-dir)))
 
 ;;;###autoload
 (defun liberime-open-shared-data-dir ()
   "Open shared data dir with external app."
   (interactive)
-  (liberime-open-directory (liberime-get-shared-data-dir)))
+  (when-let ((shared-dir (liberime-get-shared-data-dir)))
+    (liberime-open-directory shared-dir)))
 
 ;;;###autoload
 (defun liberime-open-package-directory ()
   "Open liberime library directory with external app."
   (interactive)
-  (liberime-open-directory (liberime-get-library-directory)))
+  (when-let ((library-dir (liberime-get-library-directory)))
+    (liberime-open-directory library-dir)))
 
 ;;;###autoload
 (defun liberime-open-package-readme ()
   "Open liberime library README.org."
   (interactive)
-  (find-file (concat (liberime-get-library-directory) "README.org")))
+  (when-let ((library-dir (liberime-get-library-directory)))
+    (find-file (concat library-dir "README.org"))))
 
 ;;;###autoload
 (defun liberime-build ()
@@ -260,13 +264,14 @@ if NAMES is nil, \"rime-data\" as fallback."
   "Start liberime."
   (let ((shared-dir (liberime-get-shared-data-dir))
         (user-dir (liberime-get-user-data-dir)))
-    (message "Liberime: start with shared dir: %S" shared-dir)
-    (message "Liberime: start with user dir: %S" user-dir)
-    (message "")
-    (liberime-start shared-dir user-dir)
-    (when liberime-current-schema
-      (liberime-try-select-schema liberime-current-schema))
-    (run-hooks 'liberime-after-start-hook)))
+    (when (and shared-dir user-dir)
+      (message "Liberime: start with shared dir: %S" shared-dir)
+      (message "Liberime: start with user dir: %S" user-dir)
+      (message "")
+      (liberime-start shared-dir user-dir)
+      (when liberime-current-schema
+        (liberime-try-select-schema liberime-current-schema))
+      (run-hooks 'liberime-after-start-hook))))
 
 ;;;###autoload
 (defun liberime-load ()
