@@ -162,28 +162,28 @@ if NAMES is nil, \"rime-data\" as fallback."
 (defun liberime-open-user-data-dir ()
   "Open user data dir with external app."
   (interactive)
-  (when-let ((user-dir (liberime-get-user-data-dir)))
+  (when-let* ((user-dir (liberime-get-user-data-dir)))
     (liberime-open-directory user-dir)))
 
 ;;;###autoload
 (defun liberime-open-shared-data-dir ()
   "Open shared data dir with external app."
   (interactive)
-  (when-let ((shared-dir (liberime-get-shared-data-dir)))
+  (when-let* ((shared-dir (liberime-get-shared-data-dir)))
     (liberime-open-directory shared-dir)))
 
 ;;;###autoload
 (defun liberime-open-package-directory ()
   "Open liberime library directory with external app."
   (interactive)
-  (when-let ((library-dir (liberime-get-library-directory)))
+  (when-let* ((library-dir (liberime-get-library-directory)))
     (liberime-open-directory library-dir)))
 
 ;;;###autoload
 (defun liberime-open-package-readme ()
   "Open liberime library README.org."
   (interactive)
-  (when-let ((library-dir (liberime-get-library-directory)))
+  (when-let* ((library-dir (liberime-get-library-directory)))
     (find-file (concat library-dir "README.org"))))
 
 ;;;###autoload
