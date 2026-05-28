@@ -112,6 +112,26 @@ function archive_liberime() {
         install_all_dll ${MINGW_PREFIX}/bin/librime-1.dll    \
                         ${archive_dir}/bin/                   \
                         "mingw32/bin\\|mingw32/lib\\|mingw64/bin\\|mingw64/lib\\|usr/bin\\|usr/lib"
+        # 额外确保以下动态库被包含
+        local extra_deps=(
+            libcapnp.dll
+            lua55.dll
+            libglog-2.dll
+            libkj.dll
+            libyaml-cpp.dll
+            libopencc-1.3.dll
+            libmarisa-0.dll
+            libleveldb.dll
+            libunwind.dll
+        )
+        for dep in "${extra_deps[@]}"; do
+            local dep_path="${MINGW_PREFIX}/bin/${dep}"
+            if [[ -f "${dep_path}" ]]; then
+                install -Dm644 "${dep_path}" -t "${archive_dir}/bin/"
+            else
+                echo "警告: 未找到 ${dep_path}，跳过"
+            fi
+        done
         install -Dm644 ${INSTALL_PREFIX}/lib/librime* -t ${archive_dir}/lib/
         install -Dm644 ${INSTALL_PREFIX}/include/rime* -t ${archive_dir}/include/
         install -Dm644 ${INSTALL_PREFIX}/share/opencc/* -t ${archive_dir}/share/rime-data/opencc/
