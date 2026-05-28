@@ -43,7 +43,14 @@ ifndef EMACS_MAJOR_VERSION
 	EMACS_MAJOR_VERSION := $(shell emacs --batch --eval '(princ emacs-major-version)' 2>/dev/null || echo 26)
 endif
 
-CFLAGS += -I emacs-module/$(EMACS_MAJOR_VERSION)
+EMACS_MODULE_DIR := emacs-module/$(EMACS_MAJOR_VERSION)
+ifeq ($(wildcard $(EMACS_MODULE_DIR)/emacs-module.h),)
+  EMACS_MODULE_LATEST := $(lastword $(sort $(wildcard emacs-module/*/)))
+  ifneq ($(EMACS_MODULE_LATEST),)
+    EMACS_MODULE_DIR := $(patsubst %/,%,$(EMACS_MODULE_LATEST))
+  endif
+endif
+CFLAGS += -I $(EMACS_MODULE_DIR)
 ifdef EMACS_PLUS_PATH
        CFLAGS += -I ${EMACS_PLUS_PATH}
 endif
