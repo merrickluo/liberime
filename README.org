@@ -11,6 +11,7 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
    选项。
 2. librime 版本 > 1.3.2
 
+对于非Msys2环境的Windows用户，release中提供了带依赖的打包文件。如果在Msys2环境中使用Emacs，请参考下列流程安装依赖。
 ** Windows 系统下使用 msys2 安装依赖
    #+BEGIN_SRC shell
    pacman -Sy --overwrite "*" --needed base-devel zip \
@@ -28,7 +29,11 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
    #+BEGIN_SRC shell
    ln -s ${MINGW_PREFIX}/share/opencc/* ${MINGW_PREFIX}/share/rime-data/opencc
    #+END_SRC
+** MacOS/Linux 用户安装依赖
+在对应的包管理器中安装 ~librime~ 即可。
+如Homebrew: ~brew install librime~
 * 编译
+除了在[[https://github.com/emacs-rime/liberime/releases][release]]中下载预编译好的二进制文件，也可以根据以下指南自行编译 ~liberime-core~ 文件。
 ** Linux 系统下编译 liberime:
 
    #+BEGIN_SRC shell
@@ -61,6 +66,9 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
    #+END_SRC
 
 * 使用
+对于MacOS/Linux/Msys2用户，使用前需要确保安装了 ~librime~ 。
+** 模组文件配置
+将 ~liberime-core~ 文件放置于系统环境变量 ~PATH~ 包含的路径中。如果放置在非 ~PATH~ 路径，则需手动设置 ~liberime-module-file~ 路径： ~(setq default-input-method "PATH/TO/YOUR/LIBERIME-CORE")~
 ** Emacs 配置
 #+BEGIN_SRC emacs-lisp
 (require 'pyim)
