@@ -68,7 +68,7 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
 * 使用
 对于MacOS/Linux/Msys2用户，使用前需要确保安装了 ~librime~ 。
 ** 模组文件配置
-将 ~liberime-core~ 文件放置于系统环境变量 ~PATH~ 包含的路径中。如果放置在非 ~PATH~ 路径，则需手动设置 ~liberime-module-file~ 路径： ~(setq default-input-method "PATH/TO/YOUR/LIBERIME-CORE")~
+将 ~liberime-core~ 文件放置于系统环境变量 ~PATH~ 包含的路径中。如果放置在非 ~PATH~ 路径，则需手动设置 ~liberime-module-file~ 路径： ~(setq liberime-module-file "PATH/TO/YOUR/LIBERIME-CORE")~
 ** Emacs 配置
 #+BEGIN_SRC emacs-lisp
 (require 'pyim)
