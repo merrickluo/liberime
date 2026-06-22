@@ -5,14 +5,17 @@
 liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只实现了几
 个方法，理想情况是暴露所有 librime 的 API 到 emacs-lisp.
 
-* 依赖
-** 依赖说明
+* 安装
+
+** 依赖
+可在[[https://github.com/rime/librime#packaging-status][此处]]查看 ~librime~ 的发行版打包状况。
+*** 依赖说明
 1. Emacs 需要启用动态模块支持，一般是在编译的时候使用 --with-modules
    选项。
 2. librime 版本 > 1.3.2
-
-对于非Msys2环境的Windows用户，release中提供了带依赖的打包文件。如果在Msys2环境中使用Emacs，请参考下列流程安装依赖。
-** Windows 系统下使用 msys2 安装依赖
+*** 非Msys2环境的Windows用户
+release中提供了带依赖的打包文件，请参考后续「预编译」一节。如果在Msys2环境中使用Emacs，请参考下列流程安装依赖。
+*** Windows 系统下使用 msys2 安装依赖
    #+BEGIN_SRC shell
    pacman -Sy --overwrite "*" --needed base-devel zip \
           ${MINGW_PACKAGE_PREFIX}-gcc                 \
@@ -29,19 +32,32 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
    #+BEGIN_SRC shell
    ln -s ${MINGW_PREFIX}/share/opencc/* ${MINGW_PREFIX}/share/rime-data/opencc
    #+END_SRC
-** MacOS/Linux 用户安装依赖
+*** MacOS/Linux 用户安装依赖
+
 在对应的包管理器中安装 ~librime~ 即可。
-如Homebrew: ~brew install librime~
-* 编译
-除了在[[https://github.com/emacs-rime/liberime/releases][release]]中下载预编译好的二进制文件，也可以根据以下指南自行编译 ~liberime-core~ 文件。
-** Linux 系统下编译 liberime:
+
+如Homebrew:  ~brew install librime~ 
+** 预编译（推荐）
+可以在[[https://github.com/emacs-rime/liberime/releases][release]]中下载预编译好的二进制文件。注意，没有标明 ~-with-deps~ 的压缩包里均仅包含 ~liberime-core~ 的可执行文件。
+*** Linux
+可以下载 ~linux-aarch64~ ~linux-arm64~ ~linux-armhf~ ~linux-x86_64~ 架构的压缩包，提取 ~/lib~ 其中的 ~liberime-core.so~ 。需要将 ~liberime-module-file~ 指向 ~liberime-core.so~ 文件。
+*** MacOS
+可以下载 ~macos-arm64~ ~macos-x86_64~ 架构的压缩包，提取 ~/lib~ 其中的 ~liberime-core.dylib~ 。需要将 ~liberime-module-file~ 指向 ~liberime-core.dylib~ 文件。
+*** Windows
+如果你的 Emacs 位于 MSYS2 环境中，可以下载 ~clang-arm64~ ~clang-x86_64~ ~ucrt-x86_64~ ~x86_64~ 架构的压缩包，提取 ~/bin~ 其中的 ~liberime-core.dll~ 。需要将 ~liberime-module-file~ 指向 ~liberime-core.dll~ 文件。
+如果你的 Emacs 不位于 MSYS2 环境中，请选择下载上述架构的 ~-with-deps~ 压缩包，里面附带了所需的 ~.DLL~ 文件和 ~opencc~ 文件，具体如下：
+- 相关的依赖 ~DLL~ 文件与 ~liberime-core.dll~ 一并放置于 ~/bin~ 文件夹中。需要将 ~liberime-module-file~ 指向其中的 ~liberime-core.dll~ 文件。
+- 相关的 ~rime-data~ 文件夹放置于 ~/share~ 文件夹中，里面有 ~opencc~ 文件夹和 ~librime~ 内置的输入方案。需要将 ~liberime-shared-data-dir~ 变量指向这个 ~rime-data~ 文件夹。
+** 手动编译
+也可以根据以下指南自行编译 ~liberime-core~ 文件。
+*** Linux 系统下编译 liberime:
 
    #+BEGIN_SRC shell
    export EMACS_MAJOR_VERSION = 26  # 按实际情况更改
    make
    #+END_SRC
 
-** Mac (Darwin) 系统下编译 liberime:
+*** Mac (Darwin) 系统下编译 liberime:
 1. Mac 下编译 librime, 需要安装 Xcode (good luck), 可以参考：
    [[https://github.com/rime/librime/blob/master/README-mac.md]] 
 2. 环境变量 RIME_PATH 的取值设置为 librime 所在的目录，比如：
@@ -55,7 +71,7 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
    make
    #+END_SRC
 
-** Windows 系统下使用 msys2 编译 liberime
+*** Windows 系统下使用 msys2 编译 liberime
 1. 打开 MSYS2 MinGW 终端
 2. 切换到 liberime 所在的目录
 3. 运行下面的命令
@@ -66,9 +82,6 @@ liberime 是一个 Emacs 动态模块，提供了 librime 库绑定。目前只�
    #+END_SRC
 
 * 使用
-对于MacOS/Linux/Msys2用户，使用前需要确保安装了 ~librime~ 。
-** 模组文件配置
-将 ~liberime-core~ 文件放置于系统环境变量 ~PATH~ 包含的路径中。如果放置在非 ~PATH~ 路径，则需手动设置 ~liberime-module-file~ 路径： ~(setq liberime-module-file "PATH/TO/YOUR/LIBERIME-CORE")~
 ** Emacs 配置
 #+BEGIN_SRC emacs-lisp
 (require 'pyim)
@@ -85,13 +98,10 @@ https://gist.github.com/merrickluo/553f39c131d0eb717cd59f72c9d4b60d
 
 注意事项：
 1. 一般情况下，liberime 和 [[https://github.com/tumashu/pyim][pyim]] 配合使用
-2. 默认情况下，liberime 会自动搜索 rime 共享数据目录（shared_data_dir）和
-   rime 用户数据目录（user_data_dir）, 用户也可以使用下面两个变量强制设置：
+2. 默认情况下，liberime 会自动搜索 rime 共享数据目录（shared_data_dir）和   rime 用户数据目录（user_data_dir）, 用户也可以使用下面两个变量强制设置：
    1. liberime-shared-data-dir
    2. liberime-user-data-dir
-3. Window 用户不要将 shared_data_dir 设置为小狼毫的 data 目录，因为小
-   狼毫自带的 OpenCC 文件无法用于 msys2 编译的 liberime, 会出现无法输
-   入简体中文的问题。
+3. Window 用户不要将 shared_data_dir 设置为小狼毫的 data 目录，因为小狼毫自带的 OpenCC 文件无法用于 msys2 编译的 liberime, 会出现无法输入简体中文的问题。
 
 *** 加载时自动编译
 #+BEGIN_SRC emacs-lisp
@@ -114,4 +124,3 @@ https://gist.github.com/merrickluo/553f39c131d0eb717cd59f72c9d4b60d
    #+end_src
 
 Rime 同步功能的其它信息可以参考：[[https://github.com/rime/home/wiki/UserGuide#%E5%90%8C%E6%AD%A5%E7%94%A8%E6%88%B6%E8%B3%87%E6%96%99][Rime 同步用户资料]]。
-
