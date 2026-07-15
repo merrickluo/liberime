@@ -56,6 +56,16 @@ More info: https://github.com/rime/home/wiki/SharedData"
   :group 'liberime
   :type 'boolean)
 
+(defcustom liberime-load-on-require t
+  "If non-nil, load the module and start rime when this file is loaded.
+When nil, loading `liberime' only defines things; you then call
+`liberime-load' yourself after setting `liberime-user-data-dir',
+`liberime-module-file' and friends.  This helps when a third-party
+package (e.g. pyim) issues the `require', so you cannot wrap it in a
+`let' to bind those variables around load time."
+  :group 'liberime
+  :type 'boolean)
+
 (defvar liberime-select-schema-timer nil
   "Timer used by `liberime-select-schema'.")
 
@@ -300,7 +310,8 @@ if NAMES is nil, \"rime-data\" as fallback."
           (goto-char (point-min)))
         (pop-to-buffer buf)))))
 
-(liberime-load)
+(when liberime-load-on-require
+  (liberime-load))
 
 (defun liberime-get-preedit ()
   "Get rime preedit."
