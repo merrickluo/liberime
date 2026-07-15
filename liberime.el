@@ -66,6 +66,11 @@ package (e.g. pyim) issues the `require', so you cannot wrap it in a
   :group 'liberime
   :type 'boolean)
 
+(defcustom liberime-verbose t
+  "If non-nil, echo progress messages while starting rime."
+  :group 'liberime
+  :type 'boolean)
+
 (defvar liberime-select-schema-timer nil
   "Timer used by `liberime-select-schema'.")
 
@@ -277,9 +282,9 @@ if NAMES is nil, \"rime-data\" as fallback."
   (let ((shared-dir (liberime-get-shared-data-dir))
         (user-dir (liberime-get-user-data-dir)))
     (when (and shared-dir user-dir)
-      (message "Liberime: start with shared dir: %S" shared-dir)
-      (message "Liberime: start with user dir: %S" user-dir)
-      (message "")
+      (when liberime-verbose
+        (message "Liberime: start with shared dir: %S" shared-dir)
+        (message "Liberime: start with user dir: %S" user-dir))
       (liberime-start shared-dir user-dir)
       (when liberime-current-schema
         (liberime-try-select-schema liberime-current-schema))
