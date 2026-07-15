@@ -120,6 +120,21 @@ https://gist.github.com/merrickluo/553f39c131d0eb717cd59f72c9d4b60d
   (require 'liberime nil t))
 #+END_SRC
 
+*** 延迟启动（第三方 require 场景）
+默认情况下，加载 liberime 会在文件末尾自动调用 ~(liberime-load)~ ，即在
+=require= 时就启动 rime 引擎，并读取 ~liberime-user-data-dir~ 、
+~liberime-module-file~ 等变量。如果 =require= 是由第三方包（如 pyim）发起的，
+你就无法用上面的 =let= 把它包裹起来以在加载前设置这些变量。此时可将
+~liberime-load-on-require~ 设为 nil，之后自行调用 ~liberime-load~ ：
+#+BEGIN_SRC emacs-lisp
+(setq liberime-load-on-require nil)   ; 需在 liberime 加载前设置
+(with-eval-after-load 'liberime
+  (setq liberime-user-data-dir "/PATH/TO/YOUR/rime")
+  (liberime-load))
+#+END_SRC
+
+如需静默启动时的提示信息，可设置 ~(setq liberime-verbose nil)~ 。
+
 ** 部署 Rime
 
 手动修改 librime 配置后，可以调用 ~(liberime-deploy)~ 重新部署。
