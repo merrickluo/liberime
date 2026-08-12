@@ -101,6 +101,30 @@ Creates a temporary user data directory."
       (should (stringp (car schema)))
       (should (stringp (cadr schema))))))
 
+(ert-deftest liberime-test-search-with-schema ()
+  "liberime-search with SCHEMA_ID uses that schema in a temporary
+session without changing the schema of the default session."
+  (liberime-test--skip-unless-rime)
+  (let* ((schemas (liberime-get-schema-list))
+         (ids (mapcar #'car schemas)))
+    (when (>= (length ids) 2)
+      (let* ((current (liberime-get-schema-config "" "schema/schema_id"))
+             (target (if (string= current (nth 0 ids))
+                         (nth 1 ids)
+                       (nth 0 ids)))
+             (result (liberime-search "wode" nil nil target)))
+        ;; Search with explicit schema returns candidates
+        (should (listp result))
+        ;; Default session schema is unchanged
+        (should (string= current
+                         (liberime-get-schema-config ""
+                                                     "schema/schema_id")))))))
+
+(ert-deftest liberime-test-search-with-invalid-schema ()
+  "liberime-search with unknown SCHEMA_ID should signal an error."
+  (liberime-test--skip-unless-rime)
+  (should-error (liberime-search "wode" nil nil "no_such_schema_xyz")))
+
 ;; ---------------------------------------------------------------------------
 ;; Input processing tests
 ;; ---------------------------------------------------------------------------
