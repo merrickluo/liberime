@@ -220,10 +220,13 @@ static emacs_value _build_candidate_list(emacs_env *env,
 }
 
 DOCSTRING(
-    search, "STRING &optional LIMIT INDEX",
+    search, "STRING &optional LIMIT INDEX SCHEMA_ID",
     "Input STRING and return LIMIT number candidates starting from INDEX.\n"
     "When LIMIT is nil, return all candidates from INDEX.\n"
     "When INDEX is nil, start from 0.\n"
+    "SCHEMA_ID, when non-nil, searches using the given schema.\n"
+    "It only affects the temporary session, so the schema of the\n"
+    "default session and global state are unchanged.\n"
     "This function always uses a separate session to avoid\n"
     "interfering with current input.");
 static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
@@ -246,6 +249,11 @@ static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
     index = env->extract_integer(env, args[2]);
   }
 
+  char *schema_id = NULL;
+  if (nargs >= 4 && env->is_not_nil(env, args[3])) {
+    schema_id = em_get_string(env, args[3]);
+  }
+
   // Always create a new session for search to avoid interfering with
   // the default session
   RimeSessionId session_id = rime->api->create_session();
@@ -253,7 +261,32 @@ static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
   if (!session_id) {
     em_signal_rimeerr(env, 1, "Cannot create session.");
     free(string);
+    free(schema_id);
     return em_nil;
+  }
+
+  if (schema_id) {
+    // Select schema for the temporary session only, so the default
+    // session and global state are not affected.
+    bool schema_found = false;
+    RimeSchemaList schema_list;
+    if (rime->api->get_schema_list(&schema_list)) {
+      for (int i = 0; i < schema_list.size; i++) {
+        if (strcmp(schema_list.list[i].schema_id, schema_id) == 0) {
+          schema_found = true;
+          break;
+        }
+      }
+      rime->api->free_schema_list(&schema_list);
+    }
+    if (!schema_found || !rime->api->select_schema(session_id, schema_id)) {
+      free(schema_id);
+      free(string);
+      rime->api->destroy_session(session_id);
+      em_signal_rimeerr(env, 1, "Failed to select schema.");
+      return em_nil;
+    }
+    free(schema_id);
   }
 
   rime->api->clear_composition(session_id);
@@ -1132,7 +1165,7 @@ void liberime_init(emacs_env *env) {
   }
 
   DEFUN("liberime-start", start, 2, 2);
-  DEFUN("liberime-search", search, 1, 3);
+  DEFUN("liberime-search", search, 1, 4);
   DEFUN("liberime-get-candidates", get_candidates, 0, 2);
   DEFUN("liberime-select-schema", select_schema, 1, 1);
   DEFUN("liberime-get-schema-list", get_schema_list, 0, 0);

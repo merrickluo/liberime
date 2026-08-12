@@ -11,7 +11,7 @@
 
 (liberime-get-schema-list)
 (liberime-select-schema "luna_pinyin_simp")
-(liberime-search "wode" nil)
+(liberime-search "wode" nil nil "luna_pinyin_simp")
 (liberime-finalize)
 (liberime-get-user-config "default.custom" "patch/menu/page_size" "int")
 (liberime-set-user-config "default.custom" "patch/menu/page_size" 100 "int")
