@@ -168,6 +168,21 @@ session without changing the schema of the default session."
                           (caar schemas))))
       (liberime-session-destroy session))))
 
+(ert-deftest liberime-test-search-without-candidates ()
+  "Search paths must not crash on codes with few or no candidates.
+
+Exercises `_get_candidates' with an (possibly) empty result: the linked
+list nodes must be safely freeable even when never filled (see
+free_candidate_list).  The assertion only checks the return type so the
+test passes regardless of whether `vbnm' has candidates in the loaded
+schema."
+  (liberime-test--skip-unless-rime)
+  ;; plain search path
+  (should (listp (liberime-search "vbnm" nil)))
+  ;; full-context path
+  (let ((result (liberime-search "vbnm" nil nil nil t)))
+    (should (listp result))))
+
 (ert-deftest liberime-test-search-with-invalid-schema ()
   "liberime-search with unknown SCHEMA_ID should signal an error."
   (liberime-test--skip-unless-rime)
