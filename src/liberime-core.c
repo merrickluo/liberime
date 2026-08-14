@@ -256,16 +256,21 @@ static emacs_value _build_candidate_list(emacs_env *env,
 
 // Select SCHEMA_ID on a temporary SESSION for search.
 //
-// Selecting a schema persists var/previously_selected_schema (see
-// Switcher::SetActiveSchema), which changes the schema of sessions created
-// afterwards.  Save the current selection and restore it afterwards so that
-// a temporary session cannot affect the default session or a later restart.
-// Return false when the schema is unknown or selection fails.
+// Selecting a schema persists var/previously_selected_schema and
+// var/schema_access_time/<schema_id> (see Switcher::SetActiveSchema), which
+// changes the schema of sessions created afterwards.  Save both values and
+// restore them afterwards so that a temporary session leaves no trace in the
+// user config.  Return false when the schema is unknown or selection fails.
 static bool _select_temporary_schema(EmacsRime *rime,
                                      RimeSessionId session_id,
                                      const char *schema_id) {
   char previous_schema[SCHEMA_MAXSTRLEN] = "";
   bool has_previous = false;
+  int access_time = 0;
+  bool has_access_time = false;
+  char access_key[SCHEMA_MAXSTRLEN + 32];
+  snprintf(access_key, sizeof(access_key), "var/schema_access_time/%s",
+           schema_id);
   RimeConfig *user_cfg = malloc(sizeof(RimeConfig));
   if (rime->api->user_config_open("user", user_cfg)) {
     const char *previous = rime->api->config_get_cstring(
@@ -275,6 +280,8 @@ static bool _select_temporary_schema(EmacsRime *rime,
       previous_schema[SCHEMA_MAXSTRLEN - 1] = '\0';
       has_previous = true;
     }
+    has_access_time =
+        rime->api->config_get_int(user_cfg, access_key, &access_time);
     rime->api->config_close(user_cfg);
   }
   free(user_cfg);
@@ -293,14 +300,19 @@ static bool _select_temporary_schema(EmacsRime *rime,
   bool selected =
       schema_found && rime->api->select_schema(session_id, schema_id);
 
-  // Restore the persisted schema selection.  This runs even when
-  // SELECTED is false as a defence in depth: librime may still have
-  // written the variable internally before reporting failure.
+  // Restore the persisted values.  This runs even when SELECTED is false
+  // as a defence in depth: librime may still have written the variables
+  // internally before reporting failure.
   RimeConfig *restore_cfg = malloc(sizeof(RimeConfig));
   if (rime->api->user_config_open("user", restore_cfg)) {
     rime->api->config_set_string(restore_cfg,
                                  "var/previously_selected_schema",
                                  has_previous ? previous_schema : "");
+    if (has_access_time) {
+      rime->api->config_set_int(restore_cfg, access_key, access_time);
+    } else {
+      rime->api->config_clear(restore_cfg, access_key);
+    }
     rime->api->config_close(restore_cfg);
   }
   free(restore_cfg);
