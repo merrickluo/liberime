@@ -160,9 +160,12 @@ static void _candidates_append(EmacsRimeCandidates *cands,
 
 EmacsRimeCandidates _get_candidates(EmacsRime *rime, RimeSessionId session_id,
                                     size_t index, size_t limit) {
+  // calloc: the dummy head (and each node allocated inside the loop)
+  // must have NULL text/comment so `free_candidate_list' can release
+  // them even when the node was never filled (e.g. no candidates).
   EmacsRimeCandidates c = {
       .size = 0,
-      .list = (CandidateLinkedList *)malloc(sizeof(CandidateLinkedList))};
+      .list = (CandidateLinkedList *)calloc(1, sizeof(CandidateLinkedList))};
 
   RimeCandidateListIterator iterator = {0};
   CandidateLinkedList *next = c.list;
@@ -178,7 +181,8 @@ EmacsRimeCandidates _get_candidates(EmacsRime *rime, RimeSessionId session_id,
       next->text = _copy_string(iterator.candidate.text);
       next->comment = _copy_string(iterator.candidate.comment);
 
-      next->next = (CandidateLinkedList *)malloc(sizeof(CandidateLinkedList));
+      next->next =
+          (CandidateLinkedList *)calloc(1, sizeof(CandidateLinkedList));
 
       next = next->next;
     }
