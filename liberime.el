@@ -2,7 +2,7 @@
 
 ;; Author: A.I.
 ;; URL: https://github.com/merrickluo/liberime
-;; Version: 0.0.7
+;; Version: 0.0.10
 ;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: convenience, Chinese, input-method, rime
 
