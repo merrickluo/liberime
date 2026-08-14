@@ -125,6 +125,39 @@ session without changing the schema of the default session."
   (liberime-test--skip-unless-rime)
   (should-error (liberime-search "wode" nil nil "no_such_schema_xyz")))
 
+(ert-deftest liberime-test-search-full-context ()
+  "liberime-search with FULL-CONTEXT returns a plist of candidate groups."
+  (liberime-test--skip-unless-rime)
+  (let ((result (liberime-search "wode" nil nil nil t)))
+    (should (listp result))
+    (should (plist-get result :full))
+    (should (listp (plist-get result :full)))
+    ;; "wode" splits into "wo" + "de", so single-character
+    ;; candidates only consume the shortest prefix.
+    (should (plist-get result :prefix))
+    (should (string= (plist-get result :remainder) "de"))
+    ;; The status of the temporary session is reported.
+    (should (stringp (plist-get result :schema-id)))
+    (should (member (plist-get result :is-ascii-mode) '(nil t)))
+    (should (member (plist-get result :is-simplified) '(nil t)))))
+
+(ert-deftest liberime-test-search-full-context-schema ()
+  "liberime-search with FULL-CONTEXT and SCHEMA_ID reports that schema."
+  (liberime-test--skip-unless-rime)
+  (let* ((schemas (liberime-get-schema-list))
+         (ids (mapcar #'car schemas)))
+    (when ids
+      (let ((result (liberime-search "wode" nil nil (car ids) t)))
+        (should (string= (plist-get result :schema-id) (car ids)))))))
+
+(ert-deftest liberime-test-search-full-context-plain-compat ()
+  "liberime-search without FULL-CONTEXT still returns a plain list."
+  (liberime-test--skip-unless-rime)
+  (let ((result (liberime-search "wode" 5)))
+    (should (listp result))
+    (should (= (length result) 5))
+    (should (stringp (car result)))))
+
 ;; ---------------------------------------------------------------------------
 ;; Input processing tests
 ;; ---------------------------------------------------------------------------

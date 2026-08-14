@@ -150,3 +150,29 @@ https://gist.github.com/merrickluo/553f39c131d0eb717cd59f72c9d4b60d
    #+end_src
 
 Rime 同步功能的其它信息可以参考：[[https://github.com/rime/home/wiki/UserGuide#%E5%90%8C%E6%AD%A5%E7%94%A8%E6%88%B6%E8%B3%87%E6%96%99][Rime 同步用户资料]]。
+
+** liberime-search 的 FULL-CONTEXT 参数
+
+~liberime-search~ 的第 5 个可选参数 ~FULL-CONTEXT~ 让调用方获得 Rime 候选
+对输入码的消费结构，而不只是候选文本列表。传非 ~nil~ 时返回 plist：
+
+- ~:commit~ —— Rime 自动上屏的文本。形码等定长码 schema 在码超长时会顶出
+  已完成的字，该字不再出现在候选菜单中；无自动上屏时为 ~nil~。
+- ~:full~ —— 完整消耗输入码的候选（整词）。
+- ~:prefix~ —— 只消耗输入码最短非空前缀的候选（如拼音输入 ~nihaoshijie~
+  时，单字候选 ~你~ 只消耗 ~ni~）。
+- ~:remainder~ —— ~:prefix~ 消耗后剩下的码后缀（如 ~haoshijie~），可递归
+  展开。
+- ~:remaining-input~ —— 本次输入的原始码串（~get_input~ 的返回值），不依
+  附于任何前缀候选；用于判断 ~:commit~ 是否可信：提交后仍有未消费输入且
+  无候选时，~:commit~ 只是自动上屏的前缀，不能作为完整展开。
+- ~:schema-id~ / ~:schema-name~ —— 临时 session 实际使用的 schema（及
+  ~:is-disabled~、~:is-composing~、~:is-ascii-mode~、~:is-full-shape~、
+  ~:is-simplified~、~:is-traditional~、~:is-ascii-punct~ 等选项状态），让
+  调用方可以按产生候选的实际状态做缓存 key。
+
+例如拼音 schema 下 ~(liberime-search "nihaoshijie" nil nil nil t)~ 可能返
+回 ~:full~ = ~("你好世界")~、~:prefix~ = 单字候选（~你~ 等，只消耗
+~ni~）、~:remainder~ = ~"haoshijie"~。这些数据让 liberime-regexp 之类的
+调用方可以把 Rime 码递归展开为正则表达式。向后兼容：不传该参数时行为与
+旧版一致（返回候选文本列表）。
