@@ -103,6 +103,32 @@ static bool _ensure_session(EmacsRime *rime) {
   return true;
 }
 
+// Resolve an optional SESSION argument.  When SESSION_ARG is nil, the
+// default session is used (creating it if necessary); otherwise the given
+// session id must refer to a live session created by
+// `liberime-session-create'.  On failure (*ok == false) an error has been
+// signalled and the caller should return em_nil after releasing its own
+// resources.
+static RimeSessionId _resolve_session(emacs_env *env, EmacsRime *rime,
+                                      emacs_value session_arg, bool *ok) {
+  *ok = false;
+  if (env->is_not_nil(env, session_arg)) {
+    RimeSessionId id = (RimeSessionId)env->extract_integer(env, session_arg);
+    if (!rime->api->find_session(id)) {
+      em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+      return 0;
+    }
+    *ok = true;
+    return id;
+  }
+  if (_ensure_session(rime)) {
+    *ok = true;
+    return rime->session_id;
+  }
+  em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+  return 0;
+}
+
 static char *_copy_string(const char *str) {
   if (str) {
     size_t size = strnlen(str, CANDIDATE_MAXSTRLEN);
@@ -434,7 +460,7 @@ static void _plist_push(emacs_env *env, emacs_value plist[], int *pi,
 }
 
 DOCSTRING(
-    search, "STRING &optional LIMIT INDEX SCHEMA_ID FULL-CONTEXT",
+    search, "STRING &optional LIMIT INDEX SCHEMA_ID FULL-CONTEXT SESSION",
     "Input STRING and return LIMIT number candidates starting from INDEX.\n"
     "When LIMIT is nil, return all candidates from INDEX.\n"
     "When INDEX is nil, start from 0.\n"
@@ -478,7 +504,10 @@ DOCSTRING(
     "could be a whole-phrase candidate while :prefix contains single-\n"
     "character candidates that consume only \"ni\", with :remainder\n"
     "\"haoshijie\".  LIMIT still bounds how many highlighted states are\n"
-    "examined.");
+    "examined.\n"
+    "SESSION, when non-nil, is a session id from `liberime-session-create'\n"
+    "to search in; the session is reused instead of creating and destroying\n"
+    "a temporary one.");
 static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
                           void *data) {
   EmacsRime *rime = (EmacsRime *)data;
@@ -509,21 +538,37 @@ static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
     full_context = true;
   }
 
-  // Always create a new session for search to avoid interfering with
-  // the default session
-  RimeSessionId session_id = rime->api->create_session();
-
-  if (!session_id) {
-    em_signal_rimeerr(env, 1, "Cannot create session.");
-    free(string);
-    free(schema_id);
-    return em_nil;
+  // When SESSION is given, reuse that session instead of creating and
+  // destroying a temporary one.  The caller owns its lifetime.
+  bool reuse_session = false;
+  RimeSessionId session_id = 0;
+  if (nargs >= 6 && env->is_not_nil(env, args[5])) {
+    session_id = (RimeSessionId)env->extract_integer(env, args[5]);
+    if (!rime->api->find_session(session_id)) {
+      em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+      free(string);
+      free(schema_id);
+      return em_nil;
+    }
+    reuse_session = true;
+  } else {
+    // Always create a new session for search to avoid interfering with
+    // the default session
+    session_id = rime->api->create_session();
+    if (!session_id) {
+      em_signal_rimeerr(env, 1, "Cannot create session.");
+      free(string);
+      free(schema_id);
+      return em_nil;
+    }
   }
 
   if (schema_id && !_select_temporary_schema(rime, session_id, schema_id)) {
     free(schema_id);
     free(string);
-    rime->api->destroy_session(session_id);
+    if (!reuse_session) {
+      rime->api->destroy_session(session_id);
+    }
     em_signal_rimeerr(env, 1, "Failed to select schema.");
     return em_nil;
   }
@@ -614,31 +659,85 @@ static emacs_value search(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
     free(expansions.remainder);
     _free_session_status(&status);
   } else {
-    EmacsRimeCandidates candidates =
-        _get_candidates(rime, session_id, index, limit);
+    EmacsRimeCandidates candidates = _get_candidates(rime, session_id, index, limit);
     result = _build_candidate_list(env, candidates);
     free_candidate_list(candidates.list);
   }
 
   free(string);
 
-  // Destroy the temporary session
-  rime->api->destroy_session(session_id);
+  if (!reuse_session) {
+    // Destroy the temporary session
+    rime->api->destroy_session(session_id);
+  }
 
   return result;
 }
+DOCSTRING(session_create, "&optional SCHEMA_ID",
+          "Create a new temporary rime session and return its id.\n"
+          "The session is independent of the default session and can be\n"
+          "used with any liberime function that accepts a SESSION argument.\n"
+          "Destroy it with `liberime-session-destroy'; stale sessions are\n"
+          "also recycled by librime after five minutes of inactivity.\n"
+          "SCHEMA_ID, when non-nil, selects that schema for the session\n"
+          "without leaving any trace in the user config.");
+static emacs_value session_create(emacs_env *env, ptrdiff_t nargs,
+                                  emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
+
+  char *schema_id = NULL;
+  if (nargs >= 1 && env->is_not_nil(env, args[0])) {
+    schema_id = em_get_string(env, args[0]);
+  }
+
+  RimeSessionId session_id = rime->api->create_session();
+  if (!session_id) {
+    em_signal_rimeerr(env, 1, "Cannot create session.");
+    free(schema_id);
+    return em_nil;
+  }
+
+  if (schema_id && !_select_temporary_schema(rime, session_id, schema_id)) {
+    free(schema_id);
+    rime->api->destroy_session(session_id);
+    em_signal_rimeerr(env, 1, "Failed to select schema.");
+    return em_nil;
+  }
+  free(schema_id);
+
+  return env->make_integer(env, (intmax_t)session_id);
+}
+
+DOCSTRING(session_destroy, "SESSION",
+          "Destroy a session created by `liberime-session-create'.");
+static emacs_value session_destroy(emacs_env *env, ptrdiff_t nargs,
+                                   emacs_value args[], void *data) {
+  EmacsRime *rime = (EmacsRime *)data;
+
+  RimeSessionId session_id = (RimeSessionId)env->extract_integer(env, args[0]);
+  if (rime->api->destroy_session(session_id)) {
+    return em_t;
+  }
+  return em_nil;
+}
+
 
 DOCSTRING(
-    get_candidates, "&optional LIMIT INDEX",
-    "Get current candidates from the default session.\n"
+    get_candidates, "&optional LIMIT INDEX SESSION",
+    "Get current candidates from a rime session.\n"
     "LIMIT is max candidates to return, default all.\n"
     "INDEX is the starting position (0-based), default 0.\n"
-    "Unlike search, this does NOT clear composition or simulate key sequence.");
+    "SESSION is a session id from `liberime-session-create'; nil uses the\n"
+    "default session.  Unlike search, this does NOT clear composition or\n"
+    "simulate key sequence.");
 static emacs_value get_candidates(emacs_env *env, ptrdiff_t nargs,
                                   emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime *)data;
-  if (!_ensure_session(rime)) {
-    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+
+  bool session_ok;
+  RimeSessionId session_id = _resolve_session(
+      env, rime, nargs >= 3 ? args[2] : em_nil, &session_ok);
+  if (!session_ok) {
     return em_nil;
   }
 
@@ -655,8 +754,7 @@ static emacs_value get_candidates(emacs_env *env, ptrdiff_t nargs,
     index = env->extract_integer(env, args[1]);
   }
 
-  EmacsRimeCandidates candidates =
-      _get_candidates(rime, rime->session_id, index, limit);
+  EmacsRimeCandidates candidates = _get_candidates(rime, session_id, index, limit);
 
   emacs_value result = _build_candidate_list(env, candidates);
   free_candidate_list(candidates.list);
@@ -770,31 +868,35 @@ static emacs_value select_schema(emacs_env *env, ptrdiff_t nargs,
 }
 
 // input
-DOCSTRING(process_key, "KEYCODE &optional MASK",
-          "Send KEYCODE to rime session and process it.");
+DOCSTRING(process_key, "KEYCODE &optional MASK SESSION",
+          "Send KEYCODE to rime session and process it.\n"
+          "SESSION is a session id from `liberime-session-create'; nil\n"
+          "uses the default session.");
 static emacs_value process_key(emacs_env *env, ptrdiff_t nargs,
                                emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime *)data;
 
   int keycode = env->extract_integer(env, args[0]);
   int mask = 0;
-  if (nargs == 2) {
+  if (nargs >= 2 && env->is_not_nil(env, args[1])) {
     mask = env->extract_integer(env, args[1]);
   }
 
-  if (!_ensure_session(rime)) {
-    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+  bool session_ok;
+  RimeSessionId session_id =
+      _resolve_session(env, rime, nargs >= 3 ? args[2] : em_nil, &session_ok);
+  if (!session_ok) {
     return em_nil;
   }
 
-  if (rime->api->process_key(rime->session_id, keycode, mask)) {
+  if (rime->api->process_key(session_id, keycode, mask)) {
     return em_t;
   }
   return em_nil;
 }
 
 DOCSTRING(
-    simulate_key_sequence, "STRING",
+    simulate_key_sequence, "STRING &optional SESSION",
     "Simulate a key sequence STRING to rime session.\n"
     "STRING follows librime's KeySequence format:\n"
     "  - Plain ASCII chars (except '{', '}'): e.g. \"a\", \"1\", \" \"\n"
@@ -809,13 +911,15 @@ static emacs_value simulate_key_sequence(emacs_env *env, ptrdiff_t nargs,
   EmacsRime *rime = (EmacsRime *)data;
   char *string = em_get_string(env, args[0]);
 
-  if (!_ensure_session(rime)) {
-    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+  bool session_ok;
+  RimeSessionId session_id =
+      _resolve_session(env, rime, nargs >= 2 ? args[1] : em_nil, &session_ok);
+  if (!session_ok) {
     free(string);
     return em_nil;
   }
 
-  rime->api->simulate_key_sequence(rime->session_id, string);
+  rime->api->simulate_key_sequence(session_id, string);
   free(string);
   return em_t;
 }
@@ -879,7 +983,7 @@ static emacs_value liberime_event_to_key_sequence(emacs_env *env,
   return result;
 }
 
-DOCSTRING(liberime_process_event, "EVENT",
+DOCSTRING(liberime_process_event, "EVENT &optional SESSION",
           "Process Emacs EVENT by converting to key sequence and sending to "
           "librime.\n"
           "EVENT can be an integer (character with optional modifiers) or a "
@@ -888,32 +992,37 @@ static emacs_value liberime_process_event(emacs_env *env, ptrdiff_t nargs,
                                           emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime *)data;
 
-  if (!_ensure_session(rime)) {
-    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
-    return em_nil;
-  }
-
   char *key_seq = _event_to_key_sequence(env, args[0]);
   if (!key_seq) {
     return em_nil;
   }
 
-  bool success = rime->api->simulate_key_sequence(rime->session_id, key_seq);
+  bool session_ok;
+  RimeSessionId session_id =
+      _resolve_session(env, rime, nargs >= 2 ? args[1] : em_nil, &session_ok);
+  if (!session_ok) {
+    free(key_seq);
+    return em_nil;
+  }
+
+  bool success = rime->api->simulate_key_sequence(session_id, key_seq);
   free(key_seq);
   return success ? em_t : em_nil;
 }
 
-DOCSTRING(get_input, "", "Get rime input.");
+DOCSTRING(get_input, "&optional SESSION", "Get rime input.");
 static emacs_value get_input(emacs_env *env, ptrdiff_t nargs,
                              emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime *)data;
 
-  if (!_ensure_session(rime)) {
-    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+  bool session_ok;
+  RimeSessionId session_id =
+      _resolve_session(env, rime, nargs >= 1 ? args[0] : em_nil, &session_ok);
+  if (!session_ok) {
     return em_nil;
   }
 
-  const char *input = rime->api->get_input(rime->session_id);
+  const char *input = rime->api->get_input(session_id);
 
   if (!input) {
     return em_nil;
@@ -922,44 +1031,57 @@ static emacs_value get_input(emacs_env *env, ptrdiff_t nargs,
   }
 }
 
-DOCSTRING(commit_composition, "", "Commit rime composition.");
+DOCSTRING(commit_composition, "&optional SESSION",
+          "Commit rime composition.");
 static emacs_value commit_composition(emacs_env *env, ptrdiff_t nargs,
                                       emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime *)data;
 
-  if (!_ensure_session(rime)) {
-    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+  bool session_ok;
+  RimeSessionId session_id =
+      _resolve_session(env, rime, nargs >= 1 ? args[0] : em_nil, &session_ok);
+  if (!session_ok) {
     return em_nil;
   }
 
-  if (rime->api->commit_composition(rime->session_id)) {
+  if (rime->api->commit_composition(session_id)) {
     return em_t;
   }
   return em_nil;
 }
 
-DOCSTRING(clear_composition, "", "Clear rime composition.");
+DOCSTRING(clear_composition, "&optional SESSION", "Clear rime composition.");
 static emacs_value clear_composition(emacs_env *env, ptrdiff_t nargs,
                                      emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime *)data;
 
-  if (!_ensure_session(rime)) {
-    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+  bool session_ok;
+  RimeSessionId session_id =
+      _resolve_session(env, rime, nargs >= 1 ? args[0] : em_nil, &session_ok);
+  if (!session_ok) {
     return em_nil;
   }
 
-  rime->api->clear_composition(rime->session_id);
+  rime->api->clear_composition(session_id);
   return em_t;
 }
 
-DOCSTRING(select_candidate, "NUM", "Select a rime candidate by NUM.");
+DOCSTRING(select_candidate, "NUM &optional SESSION",
+          "Select a rime candidate by NUM.");
 static emacs_value select_candidate(emacs_env *env, ptrdiff_t nargs,
                                     emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime *)data;
 
   int index = env->extract_integer(env, args[0]);
 
-  if (rime->api->select_candidate_on_current_page(rime->session_id, index)) {
+  bool session_ok;
+  RimeSessionId session_id =
+      _resolve_session(env, rime, nargs >= 2 ? args[1] : em_nil, &session_ok);
+  if (!session_ok) {
+    return em_nil;
+  }
+
+  if (rime->api->select_candidate_on_current_page(session_id, index)) {
     return em_t;
   }
   return em_nil;
@@ -967,18 +1089,20 @@ static emacs_value select_candidate(emacs_env *env, ptrdiff_t nargs,
 
 // output
 
-DOCSTRING(get_commit, "", "Get rime commit.");
+DOCSTRING(get_commit, "&optional SESSION", "Get rime commit.");
 static emacs_value get_commit(emacs_env *env, ptrdiff_t nargs,
                               emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime *)data;
 
-  if (!_ensure_session(rime)) {
-    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+  bool session_ok;
+  RimeSessionId session_id =
+      _resolve_session(env, rime, nargs >= 1 ? args[0] : em_nil, &session_ok);
+  if (!session_ok) {
     return em_nil;
   }
 
   RIME_STRUCT(RimeCommit, commit);
-  if (rime->api->get_commit(rime->session_id, &commit)) {
+  if (rime->api->get_commit(session_id, &commit)) {
     if (!commit.text) {
       return em_nil;
     }
@@ -995,18 +1119,20 @@ static emacs_value get_commit(emacs_env *env, ptrdiff_t nargs,
   return em_nil;
 }
 
-DOCSTRING(get_context, "", "Get rime context.");
+DOCSTRING(get_context, "&optional SESSION", "Get rime context.");
 static emacs_value get_context(emacs_env *env, ptrdiff_t nargs,
                                emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime *)data;
 
-  if (!_ensure_session(rime)) {
-    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+  bool session_ok;
+  RimeSessionId session_id =
+      _resolve_session(env, rime, nargs >= 1 ? args[0] : em_nil, &session_ok);
+  if (!session_ok) {
     return em_nil;
   }
 
   RIME_STRUCT(RimeContext, context);
-  if (!rime->api->get_context(rime->session_id, &context)) {
+  if (!rime->api->get_context(session_id, &context)) {
     em_signal_rimeerr(env, 2, "Cannot get context.");
     return em_nil;
   }
@@ -1087,18 +1213,20 @@ static emacs_value get_context(emacs_env *env, ptrdiff_t nargs,
   return result;
 }
 
-DOCSTRING(get_status, "", "Get rime status.");
+DOCSTRING(get_status, "&optional SESSION", "Get rime status.");
 static emacs_value get_status(emacs_env *env, ptrdiff_t nargs,
                               emacs_value args[], void *data) {
   EmacsRime *rime = (EmacsRime *)data;
 
-  if (!_ensure_session(rime)) {
-    em_signal_rimeerr(env, 1, NO_SESSION_ERR);
+  bool session_ok;
+  RimeSessionId session_id =
+      _resolve_session(env, rime, nargs >= 1 ? args[0] : em_nil, &session_ok);
+  if (!session_ok) {
     return em_nil;
   }
 
   RIME_STRUCT(RimeStatus, status);
-  if (!rime->api->get_status(rime->session_id, &status)) {
+  if (!rime->api->get_status(session_id, &status)) {
     em_signal_rimeerr(env, 2, "Cannot get status.");
     return em_nil;
   }
@@ -1486,27 +1614,29 @@ void liberime_init(emacs_env *env) {
   }
 
   DEFUN("liberime-start", start, 2, 2);
-  DEFUN("liberime-search", search, 1, 5);
-  DEFUN("liberime-get-candidates", get_candidates, 0, 2);
+  DEFUN("liberime-search", search, 1, 6);
+  DEFUN("liberime-get-candidates", get_candidates, 0, 3);
+  DEFUN("liberime-session-create", session_create, 0, 1);
+  DEFUN("liberime-session-destroy", session_destroy, 1, 1);
   DEFUN("liberime-select-schema", select_schema, 1, 1);
   DEFUN("liberime-get-schema-list", get_schema_list, 0, 0);
 
   // input
-  DEFUN("liberime-process-key", process_key, 1, 2);
-  DEFUN("liberime-simulate-key-sequence", simulate_key_sequence, 1, 1);
+  DEFUN("liberime-process-key", process_key, 1, 3);
+  DEFUN("liberime-simulate-key-sequence", simulate_key_sequence, 1, 2);
   DEFUN("liberime-event-to-key-sequence", liberime_event_to_key_sequence, 1, 1);
-  DEFUN("liberime-process-event", liberime_process_event, 1, 1);
-  DEFUN("liberime-commit-composition", commit_composition, 0, 0);
-  DEFUN("liberime-clear-composition", clear_composition, 0, 0);
-  DEFUN("liberime-select-candidate", select_candidate, 1, 1);
-  DEFUN("liberime-get-input", get_input, 0, 0);
+  DEFUN("liberime-process-event", liberime_process_event, 1, 2);
+  DEFUN("liberime-commit-composition", commit_composition, 0, 1);
+  DEFUN("liberime-clear-composition", clear_composition, 0, 1);
+  DEFUN("liberime-select-candidate", select_candidate, 1, 2);
+  DEFUN("liberime-get-input", get_input, 0, 1);
 
   // output
-  DEFUN("liberime-get-commit", get_commit, 0, 0);
-  DEFUN("liberime-get-context", get_context, 0, 0);
+  DEFUN("liberime-get-commit", get_commit, 0, 1);
+  DEFUN("liberime-get-context", get_context, 0, 1);
 
   // status
-  DEFUN("liberime-get-status", get_status, 0, 0);
+  DEFUN("liberime-get-status", get_status, 0, 1);
 
   // sync
   DEFUN("liberime-get-sync-dir", get_sync_dir, 0, 0);
