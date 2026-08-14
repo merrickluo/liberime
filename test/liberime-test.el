@@ -120,6 +120,54 @@ session without changing the schema of the default session."
                          (liberime-get-schema-config ""
                                                      "schema/schema_id")))))))
 
+(ert-deftest liberime-test-session-create-and-search ()
+  "liberime-session-create returns a live session usable by liberime-search."
+  (liberime-test--skip-unless-rime)
+  (let* ((schemas (liberime-get-schema-list))
+         (ids (mapcar #'car schemas))
+         (session (liberime-session-create (car ids))))
+    (should (integerp session))
+    ;; search reusing this session reports its schema
+    (let ((result (liberime-search "wode" 5 nil nil t session)))
+      (should (string= (plist-get result :schema-id) (car ids))))
+    (liberime-session-destroy session)
+    ;; destroyed session must be rejected
+    (should-error (liberime-search "wode" 5 nil nil t session))))
+
+(ert-deftest liberime-test-session-schemas-independent ()
+  "Two temporary sessions can use different schemas."
+  (liberime-test--skip-unless-rime)
+  (let* ((schemas (liberime-get-schema-list))
+         (ids (mapcar #'car schemas)))
+    (when (>= (length ids) 2)
+      (let ((s1 (liberime-session-create (nth 0 ids)))
+            (s2 (liberime-session-create (nth 1 ids))))
+        (unwind-protect
+            (progn
+              (should (string=
+                       (plist-get (liberime-search "wode" 5 nil nil t s1)
+                                  :schema-id)
+                       (nth 0 ids)))
+              (should (string=
+                       (plist-get (liberime-search "wode" 5 nil nil t s2)
+                                  :schema-id)
+                       (nth 1 ids))))
+          (liberime-session-destroy s1)
+          (liberime-session-destroy s2))))))
+
+(ert-deftest liberime-test-session-functions-with-session ()
+  "process-key/get-input/get-status accept a SESSION argument."
+  (liberime-test--skip-unless-rime)
+  (let* ((schemas (liberime-get-schema-list))
+         (session (liberime-session-create (caar schemas))))
+    (unwind-protect
+        (progn
+          (should (eq (liberime-process-key ?a 0 session) t))
+          (should (string= (liberime-get-input session) "a"))
+          (should (string= (alist-get 'schema_id (liberime-get-status session))
+                          (caar schemas))))
+      (liberime-session-destroy session))))
+
 (ert-deftest liberime-test-search-with-invalid-schema ()
   "liberime-search with unknown SCHEMA_ID should signal an error."
   (liberime-test--skip-unless-rime)
