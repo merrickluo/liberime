@@ -150,6 +150,30 @@ session without changing the schema of the default session."
       (let ((result (liberime-search "wode" nil nil (car ids) t)))
         (should (string= (plist-get result :schema-id) (car ids)))))))
 
+(ert-deftest liberime-test-search-schema-leaves-no-user-config-trace ()
+  "liberime-search with SCHEMA_ID restores previously_selected_schema and
+schema_access_time in the user config."
+  (liberime-test--skip-unless-rime)
+  (let* ((schemas (liberime-get-schema-list))
+         (ids (mapcar #'car schemas)))
+    (when (>= (length ids) 2)
+      (let* ((current (car ids))
+             (target (cadr ids))
+             (access-key (format "var/schema_access_time/%s" target))
+             (access-value (+ 100000 (random 99999))))
+        ;; Deterministic baseline: the search must not change these values.
+        (liberime-set-user-config "user" "var/previously_selected_schema"
+                                  current)
+        (liberime-set-user-config "user" access-key access-value "int")
+        (liberime-search "wode" nil nil target t)
+        (should
+         (string= (liberime-get-user-config "user"
+                                            "var/previously_selected_schema")
+                  current))
+        (should
+         (= (liberime-get-user-config "user" access-key "int")
+            access-value))))))
+
 (ert-deftest liberime-test-search-full-context-plain-compat ()
   "liberime-search without FULL-CONTEXT still returns a plain list."
   (liberime-test--skip-unless-rime)
