@@ -176,3 +176,34 @@ Rime 同步功能的其它信息可以参考：[[https://github.com/rime/home/wi
 ~ni~）、~:remainder~ = ~"haoshijie"~。这些数据让 liberime-regexp 之类的
 调用方可以把 Rime 码递归展开为正则表达式。向后兼容：不传该参数时行为与
 旧版一致（返回候选文本列表）。
+
+** 多 session 与 SESSION 参数
+
+librime 原生支持多个相互独立的 session（各自持有 composition、候选和
+schema）。liberime 现将其暴露给 Elisp：
+
+- ~(liberime-session-create &optional SCHEMA_ID)~ —— 创建临时 session，返
+  回其 id；指定 ~SCHEMA_ID~ 时该 session 使用此 schema（对 user config 无
+  任何持久化痕迹）。librime 会在 5 分钟不活动后自动回收闲置 session，
+~liberime-finalize~ 也会清空全部 session。
+- ~(liberime-session-destroy SESSION)~ —— 销毁临时 session。
+
+以下函数接受尾部可选参数 ~SESSION~（~nil~ 表示默认 session，行为与旧版
+一致）：~liberime-search~（~SESSION~ 非 ~nil~ 时复用该 session 查询，不再
+创建/销毁临时 session）、~liberime-process-key~、~liberime-simulate-key-sequence~、
+~liberime-process-event~、~liberime-get-context~、~liberime-get-status~、
+~liberime-get-commit~、~liberime-get-input~、~liberime-clear-composition~、
+~liberime-commit-composition~、~liberime-select-candidate~、
+~liberime-get-candidates~。
+
+例如，一个 session 内连续查询多个码（避免反复创建/销毁临时 session 的开
+销），或让两个 session 使用不同 schema 互不干扰：
+
+#+begin_src emacs-lisp
+  (let ((s1 (liberime-session-create "egret_py"))
+        (s2 (liberime-session-create "luna_pinyin_simp")))
+    (liberime-search "ni" nil nil nil t s1)
+    (liberime-search "ni" nil nil nil t s2)
+    (liberime-session-destroy s1)
+    (liberime-session-destroy s2))
+#+end_src
